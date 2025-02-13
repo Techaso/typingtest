@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Test</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <form id="setup-form">
+            <h1>English Typing Test</h1>
+            <div class="upload-container">
+                <textarea id="custom-text" placeholder="Paste your text here" required></textarea>
+                <button type="button" id="upload-btn">Upload</button>
+                <input type="file" id="file-input" accept=".txt" style="display: none;">
+            </div>
+            <select id="timer" required>
+                <option value="1" selected>1 minute</option>
+                <option value="2">2 minutes</option>
+                <option value="5">5 minutes</option>
+                <option value="custom">Custom</option>
+            </select>
+            <input type="number" id="custom-timer" placeholder="Enter time (minutes)" style="display: none;" />
+            <button type="submit">Start Test</button>
+        </form>
+        <div id="typing-test" class="typing-test">
+            <div class="top-section">
+                <h1>English Typing Test</h1>
+                <div class="timer" id="timer-display">Time: 0:00</div>
+            </div>
+            <div class="middle-section">
+                <div class="typing-text" id="typing-text"></div>
+            </div>
+            <div class="bottom-section">
+                <textarea id="typing-input" placeholder="Start typing here..."></textarea>
+            </div>
+            <div class="end-test-container">
+                <button type="button" id="end-test">End Test</button>
+            </div>
+        </div>
+    </div>
+    <div id="test-results" style="display: none;"><!-- Results will appear here --></div>
+    <script src="index.js"></script>
+</body>
+</html>
