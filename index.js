@@ -63,6 +63,20 @@ function startTypingTest(text, time) {
     const typingInput = document.getElementById('typing-input');
     typingInput.value = '';
     typingInput.focus();
+
+    // Disable copy, paste, cut, context menu and common shortcuts
+    typingInput.addEventListener('cut', e => e.preventDefault());
+    typingInput.addEventListener('paste', e => e.preventDefault());
+    typingInput.addEventListener('copy', e => e.preventDefault());
+    typingInput.addEventListener('contextmenu', e => e.preventDefault());
+    typingInput.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
+            e.preventDefault();
+        }
+    });
+
+    // Set initial timer display based on user provided time
+    updateTimerDisplay(time);
     
     // Live update: compare each letter with provided text
     typingInput.addEventListener('input', function() {
@@ -92,6 +106,7 @@ function startTypingTest(text, time) {
                 let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
                 let remainingTime = time - elapsedTime;
                 if (remainingTime <= 0) {
+                    updateTimerDisplay(0);
                     clearInterval(interval);
                     calculateSpeed(typingInput.value.length, time);
                 } else {
@@ -203,8 +218,11 @@ function calculateSpeed(charsTyped, elapsedTime) {
       </table>
     `;
     
-    // Display results on the test page below end test button
+    // Display results and hide typing test container
     document.getElementById('test-results').innerHTML = resultHTML;
     document.getElementById('test-results').style.display = 'block'; // reveal results container
+
+    // Hide the container so that only the results are shown
+    document.querySelector('.container').style.display = 'none';
     // Optionally, disable further input if needed.
 }
