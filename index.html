@@ -12,7 +12,10 @@
             <h1>English Typing Test</h1>
             <div class="upload-container">
                 <textarea id="custom-text" placeholder="Paste your text here" required></textarea>
-                <button type="button" id="upload-btn">Upload</button>
+                <div class="upload-inline">
+                    <span id="upload-btn">Or</span>
+                    <button type="button" id="upload-btn">Upload</button>
+                </div>
                 <input type="file" id="file-input" accept=".txt" style="display: none;">
             </div>
             <select id="timer" required>
@@ -23,7 +26,6 @@
                 <option value="10">10 minutes</option>
                 <option value="15">15 minutes</option>
                 <option value="20">20 minutes</option>
-                
             </select>
             <input type="number" id="custom-timer" placeholder="Enter time (minutes)" style="display: none;" />
             <button type="submit">Start Test</button>

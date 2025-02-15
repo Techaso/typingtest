@@ -39,22 +39,36 @@ timerSelect.addEventListener('change', () => {
     }
 });
 
+function sanitizeQuotesAndDashes(str) {
+    // Convert fancy quotes and em dashes
+    return str
+        .replace(/[‘’]/g, "'")
+        .replace(/—/g, "--");
+}
+
 function startTypingTest(text, time) {
     console.log('Starting typing test');
     document.getElementById('setup-form').style.display = 'none';
     const typingTest = document.getElementById('typing-test');
     typingTest.classList.add('active');
     
-    // Store original text globally for later comparison
+    // Sanitize original text
+    text = sanitizeQuotesAndDashes(text);
+    // Convert multiple consecutive spaces to a single space (newlines are preserved)
+    text = text.replace(/ {2,}/g, ' ');
     window.originalText = text;
     
     const typingTextContainer = document.getElementById('typing-text');
     // Improved rendering for large text using a DocumentFragment.
     const fragment = document.createDocumentFragment();
     for (let i = 0; i < text.length; i++) {
-        const span = document.createElement('span');
-        span.textContent = text[i];
-        fragment.appendChild(span);
+        if (text[i] === '\n') {
+            fragment.appendChild(document.createElement('br'));
+        } else {
+            const span = document.createElement('span');
+            span.textContent = text[i];
+            fragment.appendChild(span);
+        }
     }
     typingTextContainer.innerHTML = '';
     typingTextContainer.appendChild(fragment);
@@ -75,21 +89,65 @@ function startTypingTest(text, time) {
         }
     });
 
+    // Prevent extra spaces when editing in the middle of the text
+    typingInput.addEventListener('keydown', function(e) {
+        if (e.key === ' ') {
+            const pos = typingInput.selectionStart;
+            // If not at the end, disallow if previous character is already a space
+            if (pos < typingInput.value.length && pos > 0 && typingInput.value[pos - 1] === ' ') {
+                e.preventDefault();
+            }
+        }
+    });
+
     // Set initial timer display based on user provided time
     updateTimerDisplay(time);
     
     // Live update: compare each letter with provided text
     typingInput.addEventListener('input', function() {
-        let inputValue = typingInput.value;
+        // Sanitize typed input to allow matching with sanitized text
+        const inputValue = sanitizeQuotesAndDashes(typingInput.value);
+        const typedWordsArr = inputValue.split(/\s+/);
+        const originalWordsArr = text.split(/\s+/);
         let newHTML = '';
-        for (let i = 0; i < text.length; i++) {
-            let expected = text[i];
-            if (i < inputValue.length) {
-                newHTML += inputValue[i] === expected
-                    ? `<span style="color: green;">${expected}</span>`
-                    : `<span style="color: red;">${expected}</span>`;
-            } else {
-                newHTML += `<span>${expected}</span>`;
+        let textIndex = 0;
+
+        // Build the typed text with per-word coloring
+        for (let w = 0; w < originalWordsArr.length; w++) {
+            let currentWordHTML = '';
+            const word = originalWordsArr[w];
+            for (let c = 0; c < word.length; c++) {
+                let typedLetter = inputValue[textIndex] || '';
+                if (typedLetter) {
+                    if (typedLetter === word[c]) {
+                        currentWordHTML += `<span style="color: green;">${word[c]}</span>`;
+                    } else {
+                        currentWordHTML += `<span style="color: red;">${word[c]}</span>`;
+                    }
+                } else {
+                    currentWordHTML += `<span>${word[c]}</span>`;
+                }
+                textIndex++;
+            }
+            // Highlight current word
+            if (w === typedWordsArr.length - 1) {
+                currentWordHTML = `<span style="background-color: yellow;">${currentWordHTML}</span>`;
+            }
+            newHTML += currentWordHTML;
+
+            // Preserve space if it exists in original text
+            while (textIndex < text.length && (text[textIndex] === ' ' || text[textIndex] === '\n')) {
+                if (text[textIndex] === ' ') {
+                    // Check if typed input has a space
+                    if (inputValue[textIndex] === ' ') {
+                        newHTML += `<span style="color: green;"> </span>`;
+                    } else {
+                        newHTML += `<span> </span>`;
+                    }
+                } else if (text[textIndex] === '\n') {
+                    newHTML += '<br>';
+                }
+                textIndex++;
             }
         }
         typingTextContainer.innerHTML = newHTML;
@@ -157,14 +215,24 @@ function calculateSpeed(charsTyped, elapsedTime) {
     const correctWordsPercent = totalTypedWords ? (correctWords / totalTypedWords) * 100 : 0;
     const wrongWordsPercent = totalTypedWords ? (wrongWords / totalTypedWords) * 100 : 0;
     
-    // Count letter errors based on typed letters only
-    const totalTypedLetters = inputText.length;
+    // Per-word letter comparison (only consider each typed word individually)
     let correctLetters = 0;
-    const minLen = Math.min(totalTypedLetters, totalOriginalLetters);
-    for (let i = 0; i < minLen; i++) {
-        if (inputText[i] === originalText[i]) correctLetters++;
+    let wrongLetters = 0;
+    for (let i = 0; i < typedWords.length; i++) {
+        const typedWord = typedWords[i] || '';
+        const origWord = originalWordsArr[i] || '';
+        const len = Math.min(typedWord.length, origWord.length);
+        for (let j = 0; j < len; j++) {
+            if (typedWord[j] === origWord[j]) {
+                correctLetters++;
+            } else {
+                wrongLetters++;
+            }
+        }
+        // Letters beyond the matched length are also wrong
+        wrongLetters += Math.abs(typedWord.length - origWord.length);
     }
-    const wrongLetters = totalTypedLetters - correctLetters;
+    const totalTypedLetters = correctLetters + wrongLetters;
     const correctLettersPercent = totalTypedLetters ? (correctLetters / totalTypedLetters) * 100 : 0;
     const wrongLettersPercent = totalTypedLetters ? (wrongLetters / totalTypedLetters) * 100 : 0;
     
