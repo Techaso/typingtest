@@ -9,15 +9,41 @@
 <body>
     <div class="container">
         <form id="setup-form">
-            <h1>English Typing Test</h1>
-            <div class="upload-container">
-                <textarea id="custom-text" placeholder="Paste your text here" required></textarea>
+            <h1>English Typing Test Exam</h1>
+            <label>
+                <input type="radio" name="text-option" id="random-text-radio" value="random" checked>
+                Random text
+            </label>
+            <!-- Random text group shows only when Random text is selected -->
+            <div id="random-text-group">
+                <select id="randomWordCount" required>
+                    <option value="50">50 words</option>
+                    <option value="100" selected>100 words</option>
+                    <option value="200">200 words</option>
+                    <option value="500">500 words</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <input type="number" id="customWordCount" placeholder="Enter number of words" style="display: none;">
+            </div>
+            <br>
+            <label>
+                <input type="radio" name="text-option" id="custom-text-radio" value="custom">
+                Custom text
+            </label>
+
+            <!-- Upload container shows only when Custom text is selected -->
+            <div class="upload-container" id="upload-container">
+                <div id="text-container">
+                    <div id="custom-text" contenteditable="true" data-placeholder="Paste text here"></div>
+                </div>
                 <div class="upload-inline">
-                    <span id="upload-btn">Or</span>
+                    <span>or</span>
                     <button type="button" id="upload-btn">Upload</button>
                 </div>
                 <input type="file" id="file-input" accept=".txt" style="display: none;">
             </div>
+            <br>
+            Select time limit:
             <select id="timer" required>
                 <option value="custom">Custom</option>
                 <option value="1" selected>1 minute</option>
@@ -28,18 +54,18 @@
                 <option value="20">20 minutes</option>
             </select>
             <input type="number" id="custom-timer" placeholder="Enter time (minutes)" style="display: none;" />
-            <button type="submit">Start Test</button>
+            <button type="submit" id="startbtn">Start Test</button>
         </form>
         <div id="typing-test" class="typing-test">
             <div class="top-section">
                 <h1>English Typing Test</h1>
                 <div class="timer" id="timer-display">Time: 0:00</div>
             </div>
-            <div class="middle-section">
+            <div class="middle-section" id="text-container">
                 <div class="typing-text" id="typing-text"></div>
             </div>
-            <div class="bottom-section">
-                <textarea id="typing-input" placeholder="Start typing here..."></textarea>
+            <div class="bottom-section" id="text-container">
+                <div id="typing-input" contenteditable="true" data-placeholder="Type here"></div>
             </div>
             <div class="end-test-container">
                 <button type="button" id="end-test">End Test</button>

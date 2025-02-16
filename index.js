@@ -1,14 +1,34 @@
 document.getElementById('setup-form').addEventListener('submit', function(event) {
     event.preventDefault();
-    console.log('Form submitted');
-    const customText = document.getElementById('custom-text').value;
-    console.log('Custom text:', customText);
-    let selectedTime = timerSelect.value === 'custom'
-        ? parseInt(customTimerInput.value)
-        : parseInt(timerSelect.value);
-    console.log('Selected time:', selectedTime);
-    const timer = selectedTime * 60;
-    startTypingTest(customText, timer);
+
+    // Check which radio is selected
+    if (randomTextRadio.checked) {
+      let count = parseInt(randomWordCountSelect.value);
+      if (randomWordCountSelect.value === 'custom') {
+        count = parseInt(customWordCountInput.value) || 50;
+      }
+      // Generate random text
+      const randomText = getRandomWords(count);
+      startTypingTest(randomText, resolveSelectedTime());
+    } else {
+      // ...existing custom text check...
+      const customTextEl = document.getElementById('custom-text');
+      const customText = customTextEl.innerText.trim();
+      if (!customText) {
+        customTextEl.classList.add('input-error');
+        console.log('Custom text is required.');
+        return;
+      } else {
+        customTextEl.classList.remove('input-error');
+      }
+      startTypingTest(customText, resolveSelectedTime());
+    }
+});
+
+document.getElementById('custom-text').addEventListener('input', function() {
+    if (this.innerText.trim()) {
+        this.classList.remove('input-error');
+    }
 });
 
 document.getElementById('upload-btn').addEventListener('click', () => {
@@ -18,7 +38,8 @@ document.getElementById('file-input').addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
         const reader = new FileReader();
         reader.onload = (event) => {
-            document.getElementById('custom-text').value = event.target.result;
+            // Changed from .value to .innerText for a contenteditable div
+            document.getElementById('custom-text').innerText = event.target.result;
             e.target.value = ""; // clear file input to avoid conflicts
             console.log('File uploaded and text set');
         };
@@ -38,6 +59,64 @@ timerSelect.addEventListener('change', () => {
         customTimerInput.required = false;
     }
 });
+
+// Radio button and random text elements
+const randomTextRadio = document.getElementById('random-text-radio');
+const customTextRadio = document.getElementById('custom-text-radio');
+const randomTextGroup = document.getElementById('random-text-group');
+const uploadContainer = document.getElementById('upload-container');
+const randomWordCountSelect = document.getElementById('randomWordCount');
+const customWordCountInput = document.getElementById('customWordCount');
+
+// Show/hide sections based on initial selection
+if (randomTextRadio.checked) {
+  randomTextGroup.style.display = 'block';
+  uploadContainer.style.display = 'none';
+}
+randomTextRadio.addEventListener('change', () => {
+  randomTextGroup.style.display = 'block';
+  uploadContainer.style.display = 'none';
+});
+customTextRadio.addEventListener('change', () => {
+  randomTextGroup.style.display = 'none';
+  uploadContainer.style.display = 'block';
+});
+
+// Toggle custom word count input
+randomWordCountSelect.addEventListener('change', () => {
+  if (randomWordCountSelect.value === 'custom') {
+    customWordCountInput.style.display = 'inline-block';
+    customWordCountInput.required = true;
+  } else {
+    customWordCountInput.style.display = 'none';
+    customWordCountInput.required = false;
+  }
+});
+
+// Generate random words
+function getRandomWords(count) {
+  const words = [
+    'lorem','ipsum','dolor','sit','amet','consectetur','adipiscing','elit',
+    'sed','do','eiusmod','tempor','incididunt','labore','et','dolore',
+    'magna','aliqua','ut','enim','ad','minim','veniam','quis','nostrud',
+    'exercitation','ullamco','laboris','nisi','aliquip','ex','commodo'
+    // ... some more if you like ...
+  ];
+  let result = [];
+  // Generate requested number of random words
+  for (let i = 0; i < count; i++) {
+    result.push(words[Math.floor(Math.random() * words.length)]);
+  }
+  return result.join(' ');
+}
+
+// Utility to resolve selected time
+function resolveSelectedTime() {
+  let selectedTime = timerSelect.value === 'custom'
+      ? parseInt(customTimerInput.value)
+      : parseInt(timerSelect.value);
+  return selectedTime * 60;
+}
 
 function sanitizeQuotesAndDashes(str) {
     // Convert fancy quotes and em dashes
@@ -75,7 +154,8 @@ function startTypingTest(text, time) {
     console.log('Rendered text length:', text.length);
     
     const typingInput = document.getElementById('typing-input');
-    typingInput.value = '';
+    // Replace value clear with innerText clear
+    typingInput.innerText = '';
     typingInput.focus();
 
     // Disable copy, paste, cut, context menu and common shortcuts
@@ -166,14 +246,15 @@ function startTypingTest(text, time) {
                 if (remainingTime <= 0) {
                     updateTimerDisplay(0);
                     clearInterval(interval);
-                    calculateSpeed(typingInput.value.length, time);
+                    // Updated to use innerText for contenteditable element
+                    calculateSpeed(typingInput.innerText.length, time);
                 } else {
                     updateTimerDisplay(remainingTime);
                 }
             }, 1000);
         }
     });
-    
+
     typingInput.style.overflowY = 'hidden';
     
     // End Test button event
@@ -181,7 +262,8 @@ function startTypingTest(text, time) {
     endTestBtn.addEventListener('click', function() {
         if (interval) clearInterval(interval);
         let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-        calculateSpeed(typingInput.value.length, elapsedTime);
+        // Updated to use innerText for contenteditable element
+        calculateSpeed(typingInput.innerText.length, elapsedTime);
     });
 }
 
@@ -193,7 +275,8 @@ function updateTimerDisplay(time) {
 
 function calculateSpeed(charsTyped, elapsedTime) {
     const keysPerMinute = (charsTyped / elapsedTime) * 60;
-    const inputText = document.getElementById('typing-input').value;
+    // Use innerText instead of value to retrieve the typed text
+    const inputText = document.getElementById('typing-input').innerText;
     const typedWords = inputText.trim().split(/\s+/).filter(w => w.length);
     const totalTypedWords = typedWords.length;
     const wordsPerMinute = (totalTypedWords / elapsedTime) * 60;
