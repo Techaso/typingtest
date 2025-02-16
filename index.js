@@ -16,7 +16,6 @@ document.getElementById('setup-form').addEventListener('submit', function(event)
       const customText = customTextEl.innerText.trim();
       if (!customText) {
         customTextEl.classList.add('input-error');
-        console.log('Custom text is required.');
         return;
       } else {
         customTextEl.classList.remove('input-error');
@@ -39,11 +38,23 @@ document.getElementById('file-input').addEventListener('change', (e) => {
         const reader = new FileReader();
         reader.onload = (event) => {
             // Changed from .value to .innerText for a contenteditable div
-            document.getElementById('custom-text').innerText = event.target.result;
+            document.getElementById('custom-text').innerText = sanitizeQuotesAndDashes(event.target.result);
             e.target.value = ""; // clear file input to avoid conflicts
-            console.log('File uploaded and text set');
         };
         reader.readAsText(e.target.files[0]);
+    }
+});
+
+// Allow pasting into custom-text but sanitize
+document.getElementById('custom-text').addEventListener('paste', function(e) {
+    e.preventDefault();
+    let pastedData = (e.clipboardData || window.clipboardData).getData('text');
+    pastedData = sanitizeQuotesAndDashes(pastedData);
+    document.getElementById('custom-text').focus();
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+        selection.deleteFromDocument();
+        selection.getRangeAt(0).insertNode(document.createTextNode(pastedData));
     }
 });
 
@@ -126,15 +137,12 @@ function sanitizeQuotesAndDashes(str) {
 }
 
 function startTypingTest(text, time) {
-    console.log('Starting typing test');
     document.getElementById('setup-form').style.display = 'none';
     const typingTest = document.getElementById('typing-test');
-    typingTest.classList.add('active');
-    
     // Sanitize original text
     text = sanitizeQuotesAndDashes(text);
-    // Convert multiple consecutive spaces to a single space (newlines are preserved)
-    text = text.replace(/ {2,}/g, ' ');
+    // Normalize each line to replace consecutive spaces with a single space.
+    text = text.split('\n').map(line => line.replace(/\s+/g, ' ')).join('\n');
     window.originalText = text;
     
     const typingTextContainer = document.getElementById('typing-text');
@@ -151,8 +159,7 @@ function startTypingTest(text, time) {
     }
     typingTextContainer.innerHTML = '';
     typingTextContainer.appendChild(fragment);
-    console.log('Rendered text length:', text.length);
-    
+    typingTest.classList.add('active');
     const typingInput = document.getElementById('typing-input');
     // Replace value clear with innerText clear
     typingInput.innerText = '';
@@ -169,12 +176,14 @@ function startTypingTest(text, time) {
         }
     });
 
-    // Prevent extra spaces when editing in the middle of the text
+    // Prevent insertion of extra space when editing text (if caret is not at end)
     typingInput.addEventListener('keydown', function(e) {
         if (e.key === ' ') {
-            const pos = typingInput.selectionStart;
-            // If not at the end, disallow if previous character is already a space
-            if (pos < typingInput.value.length && pos > 0 && typingInput.value[pos - 1] === ' ') {
+            // Get caret position using window.getSelection for contenteditable
+            const sel = window.getSelection();
+            const pos = sel ? sel.anchorOffset : 0;
+            // If caret is not at the end and previous character is already a space, prevent extra insertion
+            if (pos < typingInput.innerText.length && pos > 0 && typingInput.innerText[pos - 1] === ' ') {
                 e.preventDefault();
             }
         }
@@ -190,44 +199,49 @@ function startTypingTest(text, time) {
         const typedWordsArr = inputValue.split(/\s+/);
         const originalWordsArr = text.split(/\s+/);
         let newHTML = '';
-        let textIndex = 0;
+        let overallIndex = 0;
+        // current word is the last word in typedWordsArr (if empty, index 0)
+        const currentWordIndex = Math.max(0, typedWordsArr.length - 1);
 
-        // Build the typed text with per-word coloring
         for (let w = 0; w < originalWordsArr.length; w++) {
             let currentWordHTML = '';
             const word = originalWordsArr[w];
+            const typedWord = w < typedWordsArr.length ? typedWordsArr[w] : '';
             for (let c = 0; c < word.length; c++) {
-                let typedLetter = inputValue[textIndex] || '';
-                if (typedLetter) {
-                    if (typedLetter === word[c]) {
-                        currentWordHTML += `<span style="color: green;">${word[c]}</span>`;
-                    } else {
-                        currentWordHTML += `<span style="color: red;">${word[c]}</span>`;
+                let spanStyle = "";
+                if (w === currentWordIndex) {
+                    if (c === typedWord.length) {
+                        // Highlight the current letter (next to be typed) with green colour
+                        spanStyle = 'style="color: green;"';
+                    } else if (c < typedWord.length) {
+                        spanStyle = typedWord[c] === word[c]
+                            ? 'style="color: green;"'
+                            : 'style="color: red;"';
                     }
                 } else {
-                    currentWordHTML += `<span>${word[c]}</span>`;
+                    if (c < typedWord.length) {
+                        spanStyle = typedWord[c] === word[c]
+                            ? 'style="color: green;"'
+                            : 'style="color: red;"';
+                    }
                 }
-                textIndex++;
+                currentWordHTML += `<span ${spanStyle}>${word[c]}</span>`;
+                overallIndex++;
             }
-            // Highlight current word
-            if (w === typedWordsArr.length - 1) {
+            // Highlight current word with yellow background
+            if (w === currentWordIndex) {
                 currentWordHTML = `<span style="background-color: yellow;">${currentWordHTML}</span>`;
             }
             newHTML += currentWordHTML;
 
-            // Preserve space if it exists in original text
-            while (textIndex < text.length && (text[textIndex] === ' ' || text[textIndex] === '\n')) {
-                if (text[textIndex] === ' ') {
-                    // Check if typed input has a space
-                    if (inputValue[textIndex] === ' ') {
-                        newHTML += `<span style="color: green;"> </span>`;
-                    } else {
-                        newHTML += `<span> </span>`;
-                    }
-                } else if (text[textIndex] === '\n') {
+            // Preserve space and newline characters from original text
+            while (overallIndex < text.length && (text[overallIndex] === ' ' || text[overallIndex] === '\n')) {
+                if (text[overallIndex] === ' ') {
+                    newHTML += (inputValue[overallIndex] === ' ') ? `<span style="color: green;"> </span>` : `<span> </span>`;
+                } else if (text[overallIndex] === '\n') {
                     newHTML += '<br>';
                 }
-                textIndex++;
+                overallIndex++;
             }
         }
         typingTextContainer.innerHTML = newHTML;
@@ -319,7 +333,11 @@ function calculateSpeed(charsTyped, elapsedTime) {
     const correctLettersPercent = totalTypedLetters ? (correctLetters / totalTypedLetters) * 100 : 0;
     const wrongLettersPercent = totalTypedLetters ? (wrongLetters / totalTypedLetters) * 100 : 0;
     
-    // Build results table with new original text stats rows
+    // Compute extra metrics based on revised guidelines:
+    const fullMistakes = wrongWords; // For demo: count each wrong word as a full mistake
+    const halfMistakes = Math.floor(wrongLetters / 2); // For demo: half the wrong letter errors
+
+    // Build results table with extra metrics rows
     const resultHTML = `
       <table>
           <tr>
@@ -365,6 +383,14 @@ function calculateSpeed(charsTyped, elapsedTime) {
           <tr>
               <td>Total Original Words</td>
               <td>${totalOriginalWords}</td>
+          </tr>
+          <tr>
+              <td>Full Mistakes</td>
+              <td>${fullMistakes}</td>
+          </tr>
+          <tr>
+              <td>Half Mistakes</td>
+              <td>${halfMistakes}</td>
           </tr>
       </table>
     `;
