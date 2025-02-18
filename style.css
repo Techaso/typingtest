@@ -1,7 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Slabo+27px&display=swap');
 
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 body {
-    font-family: 'Slabo', serif;
+    font-family: Arial, sans-serif;
     background-color: #f0f0f0;
     color: #333;
     margin: 0;
@@ -32,7 +38,14 @@ form {
     flex-direction: column;
 }
 
-#startbtn {
+input[type="text"], input[type="number"] {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
     padding: 10px;
     background-color: #333;
     color: #fff;
@@ -41,7 +54,7 @@ form {
     cursor: pointer;
 }
 
-#startbtn:hover {
+button:hover {
     background-color: #555;
 }
 
@@ -49,8 +62,26 @@ form {
     display: none;
     flex-direction: column;
 }
+
 .typing-test.active {
     display: flex;
+}
+
+#custom-text, #typing-input, #typing-text {
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    height: 150px;
+    overflow-y: auto;
+    padding: 10px;
+    width: 100%;
+    margin: 20px 20px 10px 20px;
+    font-family: 'Slabo', serif;
+    font-size: 27px;
+    resize: none;
+}
+
+.typing-text {
+    background-color: #f8f9fa;
 }
 
 .timer {
@@ -60,45 +91,15 @@ form {
     text-align: center;
     font-weight: bold;
 }
-#timer,
-#custom-timer {
-    margin: 10px 0;
+
+.top-section, .middle-section {
+    flex: 1;
 }
 
-#custom-text, #typing-input, #typing-text {
-    width: 96%;
-    padding: 10px;
-    height: 150px;
-    overflow-y: auto;
-    font-family: 'Slabo', serif;
-    font-size: 24px;
-    resize: none;
+.bottom-section {
+    flex: 2;
+    margin-bottom: 20px; /* add some spacing below bottom-section */
 }
-.typing-text {
-    background-color: #f8f9fa;
-    margin:10px;
-}
-
-#custom-text[contenteditable="true"]:empty:before,
-#typing-input[contenteditable="true"]:empty:before {
-    content: attr(data-placeholder);
-    color: #aaa;
-    pointer-events: none;
-}
-
-#custom-text:focus,
-#typing-input:focus {
-  outline: none;
-  box-shadow: none;
-}
-
-#text-container {
-    width: 100%;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    margin-bottom: 10px;
-}
-
 
 .top-section, .middle-section, .bottom-section {
     flex: 1;
@@ -108,6 +109,31 @@ form {
     align-items: center;
 }
 
+/* .middle-section {
+    margin: 20px 20px 20px 0px;
+} */
+
+.end-test-container {
+    margin-top: 20px;
+}
+
+.upload-container {
+    position: static;
+    width: 100%;
+    margin: 10px 0;
+}
+
+#upload-btn {
+    display: block;
+    margin: 10px 0 0 0; /* shifted to the left side */
+}
+
+#timer,
+#custom-timer {
+    margin: 10px 0;
+}
+
+/* Elegant results table styling */
 #test-results {
     width: 100%;
     max-width: 1000px;
@@ -135,4 +161,20 @@ form {
 
 #test-results th {
     background-color: #f5f5f5;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    .typing-text {
+        font-size: 16px;
+    }
+}
+
+.upload-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* space between "Or" and the button */
 }

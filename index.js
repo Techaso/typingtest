@@ -193,16 +193,25 @@ function startTypingTest(text, time) {
     updateTimerDisplay(time);
     
     // Live update: compare each letter with provided text
+    let timerStarted = false;
+    let startTime, interval;
+
+    // Initialize currentWordIndex at 0
+    let currentWordIndex = 0;
+
     typingInput.addEventListener('input', function() {
-        // Sanitize typed input to allow matching with sanitized text
-        const inputValue = sanitizeQuotesAndDashes(typingInput.value);
+        // Sanitize typed input and retrieve its innerText
+        const inputValue = sanitizeQuotesAndDashes(typingInput.innerText);
         const typedWordsArr = inputValue.split(/\s+/);
         const originalWordsArr = text.split(/\s+/);
+        
+        // Compute currentWordIndex:
+        // If the input ends with a space or is empty, the current word is the new (empty) word.
+        let currentWordIndex = inputValue === '' ? 0 : (inputValue.endsWith(' ') ? typedWordsArr.length : typedWordsArr.length - 1);
+        
         let newHTML = '';
         let overallIndex = 0;
-        // current word is the last word in typedWordsArr (if empty, index 0)
-        const currentWordIndex = Math.max(0, typedWordsArr.length - 1);
-
+        
         for (let w = 0; w < originalWordsArr.length; w++) {
             let currentWordHTML = '';
             const word = originalWordsArr[w];
@@ -210,34 +219,29 @@ function startTypingTest(text, time) {
             for (let c = 0; c < word.length; c++) {
                 let spanStyle = "";
                 if (w === currentWordIndex) {
-                    if (c === typedWord.length) {
-                        // Highlight the current letter (next to be typed) with green colour
-                        spanStyle = 'style="color: green;"';
-                    } else if (c < typedWord.length) {
-                        spanStyle = typedWord[c] === word[c]
-                            ? 'style="color: green;"'
-                            : 'style="color: red;"';
+                    if (c < typedWord.length) {
+                        spanStyle = typedWord[c] === word[c] ? 'style="color: green;"' : 'style="color: red;"';
+                    } else {
+                        spanStyle = ""; // default style
                     }
                 } else {
                     if (c < typedWord.length) {
-                        spanStyle = typedWord[c] === word[c]
-                            ? 'style="color: green;"'
-                            : 'style="color: red;"';
+                        spanStyle = typedWord[c] === word[c] ? 'style="color: green;"' : 'style="color: red;"';
                     }
                 }
                 currentWordHTML += `<span ${spanStyle}>${word[c]}</span>`;
                 overallIndex++;
             }
-            // Highlight current word with yellow background
+            // Highlight the current word with yellow background
             if (w === currentWordIndex) {
                 currentWordHTML = `<span style="background-color: yellow;">${currentWordHTML}</span>`;
             }
             newHTML += currentWordHTML;
-
-            // Preserve space and newline characters from original text
+      
+            // Preserve spaces and newlines
             while (overallIndex < text.length && (text[overallIndex] === ' ' || text[overallIndex] === '\n')) {
                 if (text[overallIndex] === ' ') {
-                    newHTML += (inputValue[overallIndex] === ' ') ? `<span style="color: green;"> </span>` : `<span> </span>`;
+                    newHTML += (inputValue[overallIndex] === ' ' ? `<span style="color: green;"> </span>` : `<span> </span>`);
                 } else if (text[overallIndex] === '\n') {
                     newHTML += '<br>';
                 }
@@ -245,10 +249,13 @@ function startTypingTest(text, time) {
             }
         }
         typingTextContainer.innerHTML = newHTML;
+        
+        // Ensure the caret remains at the end of the input.
+        typingInput.setSelectionRange(inputValue.length, inputValue.length);
+        typingInput.focus();
     });
     
-    let timerStarted = false;
-    let startTime, interval;
+    timerStarted = false;
     
     typingInput.addEventListener('keydown', function onFirstKey() {
         if (!timerStarted) {
