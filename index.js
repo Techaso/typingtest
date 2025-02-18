@@ -402,11 +402,14 @@ function calculateSpeed(charsTyped, elapsedTime) {
       </table>
     `;
     
-    // Display results and hide typing test container
+    // Display results
     document.getElementById('test-results').innerHTML = resultHTML;
-    document.getElementById('test-results').style.display = 'block'; // reveal results container
+    document.getElementById('test-results').style.display = 'block'; // reveal results
 
-    // Hide the container so that only the results are shown
-    document.querySelector('.container').style.display = 'none';
-    // Optionally, disable further input if needed.
+    // Hide timer, typing input, and submit button while keeping typing-text visible
+    document.getElementById('timer-display').style.display = 'none';
+    document.getElementById('typing-input').style.display = 'none';
+    document.getElementById('end-test').style.display = 'none';
+    
+    // Optionally, keep typing-text visible for reference.
 }
