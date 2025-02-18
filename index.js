@@ -28,6 +28,7 @@ document.getElementById('custom-text').addEventListener('input', function() {
     if (this.innerText.trim()) {
         this.classList.remove('input-error');
     }
+    updateWordCount();
 });
 
 document.getElementById('upload-btn').addEventListener('click', () => {
@@ -39,6 +40,7 @@ document.getElementById('file-input').addEventListener('change', (e) => {
         reader.onload = (event) => {
             // Changed from .value to .innerText for a contenteditable div
             document.getElementById('custom-text').innerText = sanitizeQuotesAndDashes(event.target.result);
+            updateWordCount();
             e.target.value = ""; // clear file input to avoid conflicts
         };
         reader.readAsText(e.target.files[0]);
@@ -56,6 +58,7 @@ document.getElementById('custom-text').addEventListener('paste', function(e) {
         selection.deleteFromDocument();
         selection.getRangeAt(0).insertNode(document.createTextNode(pastedData));
     }
+    updateWordCount();
 });
 
 const timerSelect = document.getElementById('timer');
@@ -130,9 +133,10 @@ function resolveSelectedTime() {
 }
 
 function sanitizeQuotesAndDashes(str) {
-    // Convert fancy quotes and em dashes
+    // Convert fancy quotes (single and double) and em dashes to their standard forms
     return str
         .replace(/[‘’]/g, "'")
+        .replace(/[“”]/g, '"')
         .replace(/—/g, "--");
 }
 
@@ -412,4 +416,10 @@ function calculateSpeed(charsTyped, elapsedTime) {
     document.getElementById('end-test').style.display = 'none';
     
     // Optionally, keep typing-text visible for reference.
+}
+
+function updateWordCount() {
+  const text = document.getElementById('custom-text').innerText.trim();
+  const words = text === '' ? 0 : text.split(/\s+/).length;
+  document.getElementById('word-count').innerText = `Word Count: ${words}`;
 }
