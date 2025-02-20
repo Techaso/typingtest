@@ -128,10 +128,10 @@ button:hover {
     margin: 10px 0 0 0; /* shifted to the left side */
 }
 
-#timer,
+/* #timer,
 #custom-timer {
     margin: 10px 0;
-}
+} */
 
 /* Elegant results table styling */
 #test-results {

@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <form id="setup-form">
-            <h1>English Typing Test Exam</h1>
+            <h1>English Typing Test</h1>
             <label>
                 <input type="radio" name="text-option" id="random-text-radio" value="random" checked>
                 Random text
@@ -55,6 +55,13 @@
                 <option value="20">20 minutes</option>
             </select>
             <input type="number" id="custom-timer" placeholder="Enter time (minutes)" style="display: none;" />
+            <br>
+            Select Mode:
+            <select id="mode-select" required>
+                <option value="practice" selected>Practice Mode</option>
+                <option value="exam">Exam Mode</option>
+            </select>
+            <br>
             <button type="submit" id="startbtn">Start Test</button>
         </form>
         <div id="typing-test" class="typing-test">
