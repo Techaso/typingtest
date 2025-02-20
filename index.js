@@ -299,20 +299,19 @@ function updateTimerDisplay(time) {
 }
 
 function calculateSpeed(charsTyped, elapsedTime) {
-    const keysPerMinute = (charsTyped / elapsedTime) * 60;
-    // Use innerText instead of value to retrieve the typed text
+    // Use the typed text from the typing-input once
     const inputText = document.getElementById('typing-input').innerText;
     const typedWords = inputText.trim().split(/\s+/).filter(w => w.length);
     const totalTypedWords = typedWords.length;
     const wordsPerMinute = (totalTypedWords / elapsedTime) * 60;
-    
-    // Get original text stats
+
+    // Get original text stats using one declaration
     const originalText = window.originalText;
     const totalOriginalLetters = originalText.length;
     const originalWordsArr = originalText.trim().split(/\s+/).filter(w => w.length);
     const totalOriginalWords = originalWordsArr.length;
-    
-    // Count correct words in order (comparing with original text)
+
+    // Count correct words in order
     let correctWords = 0;
     for (let i = 0; i < Math.min(totalTypedWords, totalOriginalWords); i++) {
         if (typedWords[i] === originalWordsArr[i]) {
@@ -322,8 +321,8 @@ function calculateSpeed(charsTyped, elapsedTime) {
     const wrongWords = totalTypedWords - correctWords;
     const correctWordsPercent = totalTypedWords ? (correctWords / totalTypedWords) * 100 : 0;
     const wrongWordsPercent = totalTypedWords ? (wrongWords / totalTypedWords) * 100 : 0;
-    
-    // Per-word letter comparison (only consider each typed word individually)
+
+    // Per-word letter comparison
     let correctLetters = 0;
     let wrongLetters = 0;
     for (let i = 0; i < typedWords.length; i++) {
@@ -337,18 +336,15 @@ function calculateSpeed(charsTyped, elapsedTime) {
                 wrongLetters++;
             }
         }
-        // Letters beyond the matched length are also wrong
         wrongLetters += Math.abs(typedWord.length - origWord.length);
     }
     const totalTypedLetters = correctLetters + wrongLetters;
     const correctLettersPercent = totalTypedLetters ? (correctLetters / totalTypedLetters) * 100 : 0;
     const wrongLettersPercent = totalTypedLetters ? (wrongLetters / totalTypedLetters) * 100 : 0;
-    
-    // Compute extra metrics based on revised guidelines:
-    const fullMistakes = wrongWords; // For demo: count each wrong word as a full mistake
-    const halfMistakes = Math.floor(wrongLetters / 2); // For demo: half the wrong letter errors
 
-    // Build results table with extra metrics rows
+    const keysPerMinute = (charsTyped / elapsedTime) * 60;
+
+    // Build results table with extra metrics rows (unchanged)
     const resultHTML = `
       <table>
           <tr>
@@ -397,23 +393,40 @@ function calculateSpeed(charsTyped, elapsedTime) {
           </tr>
           <tr>
               <td>Full Mistakes</td>
-              <td>${fullMistakes}</td>
+              <td>${wrongWords}</td>
           </tr>
           <tr>
               <td>Half Mistakes</td>
-              <td>${halfMistakes}</td>
+              <td>${Math.floor(wrongLetters / 2)}</td>
           </tr>
       </table>
     `;
     
     // Display results
     document.getElementById('test-results').innerHTML = resultHTML;
-    document.getElementById('test-results').style.display = 'block'; // reveal results
+    document.getElementById('test-results').style.display = 'block';
 
-    // Hide timer, typing input, and submit button while keeping typing-text visible
+    // Hide timer, typing input, and submit button
     document.getElementById('timer-display').style.display = 'none';
     document.getElementById('typing-input').style.display = 'none';
     document.getElementById('end-test').style.display = 'none';
+
+    // === New Code: Build wrong words list ===
+    // Remove any existing wrong words list
+    const existingList = document.getElementById('wrong-words-list');
+    if (existingList) {
+        existingList.remove();
+    }
+    let wrongWordsHTML = '';
+    for (let i = 0; i < Math.min(typedWords.length, originalWordsArr.length); i++) {
+        if (typedWords[i] !== originalWordsArr[i]) {
+            wrongWordsHTML += `<div><span style="color: red;">${typedWords[i] || ''}</span> {<span style="color: green;">${originalWordsArr[i]}</span>}</div>`;
+        }
+    }
+    if (wrongWordsHTML) {
+        document.getElementById('typing-text').insertAdjacentHTML('afterend', `<div id="wrong-words-list" style="text-align:center;"><h3>List of wrong typed words</h3>${wrongWordsHTML}</div>`);
+    }
+    // === End New Code ===
     
     // Optionally, keep typing-text visible for reference.
 }
