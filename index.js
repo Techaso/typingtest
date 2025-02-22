@@ -170,15 +170,15 @@ function startTypingTest(text, time) {
     typingInput.focus();
 
     // Disable copy, paste, cut, context menu and common shortcuts
-    typingInput.addEventListener('cut', e => e.preventDefault());
-    typingInput.addEventListener('paste', e => e.preventDefault());
-    typingInput.addEventListener('copy', e => e.preventDefault());
-    typingInput.addEventListener('contextmenu', e => e.preventDefault());
-    typingInput.addEventListener('keydown', e => {
-        if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
-            e.preventDefault();
-        }
-    });
+    // typingInput.addEventListener('cut', e => e.preventDefault());
+    // typingInput.addEventListener('paste', e => e.preventDefault());
+    // typingInput.addEventListener('copy', e => e.preventDefault());
+    // typingInput.addEventListener('contextmenu', e => e.preventDefault());
+    // typingInput.addEventListener('keydown', e => {
+    //     if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
+    //         e.preventDefault();
+    //     }
+    // });
 
     // Prevent insertion of extra space when editing text (if caret is not at end)
     typingInput.addEventListener('keydown', function(e) {
@@ -202,6 +202,13 @@ function startTypingTest(text, time) {
 
     // Initialize currentWordIndex at 0
     let currentWordIndex = 0;
+
+    // NEW: Set blur based on mode when test starts.
+    if (modeSelect.value === 'blind') {
+        typingInput.style.filter = "blur(8px)";
+    } else {
+        typingInput.style.filter = "";
+    }
 
     typingInput.addEventListener('input', function() {
         const inputValue = sanitizeQuotesAndDashes(typingInput.innerText);
@@ -387,14 +394,6 @@ function calculateSpeed(charsTyped, elapsedTime) {
               <td>Total Original Words</td>
               <td>${totalOriginalWords}</td>
           </tr>
-          <tr>
-              <td>Full Mistakes</td>
-              <td>${wrongWords}</td>
-          </tr>
-          <tr>
-              <td>Half Mistakes</td>
-              <td>${Math.floor(wrongLetters / 2)}</td>
-          </tr>
       </table>
     `;
     
@@ -408,62 +407,8 @@ function calculateSpeed(charsTyped, elapsedTime) {
     // Disable further editing of the typing input
     document.getElementById('typing-input').setAttribute('contenteditable', 'false');
 
-    // New Code: Re-render typing-text with letter highlighting (applied for both exam and practice)
-    (function updateFinalHighlight(){
-        const inputText = document.getElementById('typing-input').innerText;
-        const typedWordsArr = inputText.trim().split(/\s+/);
-        const originalWordsArr = window.originalText.trim().split(/\s+/);
-        let newHTML = '';
-        let overallIndex = 0;
-        let currentWordIndex = (typedWordsArr.length === 0) ? 0 : typedWordsArr.length;
-        for (let w = 0; w < originalWordsArr.length; w++) {
-            let currentWordHTML = '';
-            const word = originalWordsArr[w];
-            const typedWord = w < typedWordsArr.length ? typedWordsArr[w] : '';
-            for (let c = 0; c < word.length; c++) {
-                let spanStyle = "";
-                if (c < typedWord.length) {
-                    spanStyle = (typedWord[c] === word[c]) ? 'style="color: green;"' : 'style="color: red;"';
-                }
-                currentWordHTML += `<span ${spanStyle}>${word[c]}</span>`;
-                overallIndex++;
-            }
-            // Highlight current word (if any mismatch exists)
-            if (w === currentWordIndex - 1) {
-                currentWordHTML = `<span style="background-color: yellow;">${currentWordHTML}</span>`;
-            }
-            newHTML += currentWordHTML;
-            while (overallIndex < window.originalText.length && (window.originalText[overallIndex] === ' ' || window.originalText[overallIndex] === '\n')) {
-                if (window.originalText[overallIndex] === ' ') {
-                    newHTML += `<span> </span>`;
-                } else {
-                    newHTML += '<br>';
-                }
-                overallIndex++;
-            }
-        }
-        document.getElementById('typing-text').innerHTML = newHTML;
-    })();
-    // End New Code
-  
-    // New Code: Build wrong words list (in both modes)
-    const existingList = document.getElementById('wrong-words-list');
-    if (existingList) { existingList.remove(); }
-    const inputTextForWrong = document.getElementById('typing-input').innerText.trim();
-    const typedWordsList = inputTextForWrong.split(/\s+/).filter(w => w.length);
-    const originalWordsList = window.originalText.trim().split(/\s+/).filter(w => w.length);
-    let wrongWordsHTML = '';
-    const len = Math.min(typedWordsList.length, originalWordsList.length);
-    for (let i = 0; i < len; i++) {
-        if (typedWordsList[i] !== originalWordsList[i]) {
-            wrongWordsHTML += `<div><span style="color: red;">${typedWordsList[i] || ''}</span> {<span style="color: green;">${originalWordsList[i]}</span>}</div>`;
-        }
-    }
-    if (wrongWordsHTML) {
-        document.getElementById('typing-text').insertAdjacentHTML('afterend', 
-            `<div id="wrong-words-list" style="text-align:center;"><h3>List of wrong typed words</h3>${wrongWordsHTML}</div>`);
-    }
-    // End New Code
+
+    updateParagraphHighlight(); // Re-render typing-text with extra spaces highlighted.
 }
 
 function updateWordCount() {
@@ -473,3 +418,53 @@ function updateWordCount() {
 }
 
 const modeSelect = document.getElementById('mode-select');
+
+// Updated global alignWords helper with tie-breaking (prefer deletion when costs tie)
+function alignWords(original, typed) {
+    const m = original.length, n = typed.length;
+    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++){
+        for (let j = 1; j <= n; j++){
+            if (original[i - 1] === typed[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1];
+            } else {
+                dp[i][j] = Math.min(
+                    dp[i - 1][j] + 1,        // deletion
+                    dp[i - 1][j - 1] + 1,      // substitution
+                    dp[i][j - 1] + 1           // insertion
+                );
+            }
+        }
+    }
+    let i = m, j = n;
+    const aligned = [];
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && original[i - 1] === typed[j - 1]) {
+            aligned.unshift({ original: original[i - 1], typed: typed[j - 1] });
+            i--; j--;
+        } else if (i > 0 && dp[i][j] === dp[i - 1][j] + 1) {
+            // Prefer deletion in a tie, so if omission, mark original word missing
+            aligned.unshift({ original: original[i - 1], typed: null });
+            i--;
+        } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
+            aligned.unshift({ original: original[i - 1], typed: typed[j - 1] });
+            i--; j--;
+        } else if (j > 0 && dp[i][j] === dp[i][j - 1] + 1) {
+            aligned.unshift({ original: null, typed: typed[j - 1] });
+            j--;
+        }
+    }
+    return aligned;
+}
+
+// NEW: Apply blur if Blind Test mode is selected
+modeSelect.addEventListener('change', function() {
+    const typingInput = document.getElementById('typing-input');
+    if (this.value === 'blind') {
+        typingInput.style.filter = "blur(8px)";
+    } else {
+        typingInput.style.filter = "";
+    }
+});
