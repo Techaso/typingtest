@@ -552,6 +552,11 @@ saveTextBtn.addEventListener('click', function() {
         let saved = JSON.parse(localStorage.getItem('savedTexts') || '[]');
         saved.push({ heading, text: textValue });
         localStorage.setItem('savedTexts', JSON.stringify(saved));
+        // Immediately show the View Saved Texts button
+        const viewSavedBtn = document.getElementById('view-saved-btn');
+        if (viewSavedBtn) {
+            viewSavedBtn.style.display = 'inline-block';
+        }
         showModalAutoDismiss("Text saved!");
     });
 });
