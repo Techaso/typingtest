@@ -21,18 +21,20 @@ document.getElementById('file-input').addEventListener('change', (e) => {
     }
 });
 
-// Allow pasting into custom-text but sanitize
+// Update the paste event handler for #custom-text:
 document.getElementById('custom-text').addEventListener('paste', function(e) {
     e.preventDefault();
     let pastedData = (e.clipboardData || window.clipboardData).getData('text');
     pastedData = sanitizeQuotesAndDashes(pastedData);
-    document.getElementById('custom-text').focus();
+    const customText = document.getElementById('custom-text');
+    customText.focus();
     const selection = window.getSelection();
     if (selection.rangeCount > 0) {
         selection.deleteFromDocument();
         selection.getRangeAt(0).insertNode(document.createTextNode(pastedData));
     }
-    updateWordCount();
+    // Trigger input event after paste so that Save Text button is updated
+    customText.dispatchEvent(new Event('input', { bubbles: true }));
 });
 
 const timerSelect = document.getElementById('timer');
@@ -72,6 +74,13 @@ customTextRadio.addEventListener('change', () => {
     customWordCountInput.disabled = true;
     randomTextGroup.style.display = 'none';
     uploadContainer.style.display = 'block';
+    // NEW: Check if saved texts exist and toggle the View Saved Texts button
+    let saved = JSON.parse(localStorage.getItem('savedTexts') || '[]');
+    if (saved.length > 0) {
+        viewSavedBtn.style.display = 'inline-block';
+    } else {
+        viewSavedBtn.style.display = 'none';
+    }
 });
 
 // Toggle custom word count input
@@ -472,5 +481,115 @@ modeSelect.addEventListener('change', function() {
         typingInput.style.filter = "blur(8px)";
     } else {
         typingInput.style.filter = "";
+    }
+});
+
+const customText = document.getElementById('custom-text');
+const saveTextBtn = document.getElementById('save-text-btn');
+
+// Show Save Text button if custom-text has non-empty text
+customText.addEventListener('input', function() {
+    updateWordCount();
+    if (this.innerText.trim().length > 0) {
+        saveTextBtn.style.display = 'inline-block';
+    } else {
+        saveTextBtn.style.display = 'none';
+    }
+});
+
+// NEW: Define a custom modal for saving text (replacing prompt for heading)
+function openSaveTextModal(callback) {
+    const modalOverlay = document.createElement('div');
+    modalOverlay.style.position = 'fixed';
+    modalOverlay.style.top = '0';
+    modalOverlay.style.left = '0';
+    modalOverlay.style.width = '100%';
+    modalOverlay.style.height = '100%';
+    modalOverlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modalOverlay.style.display = 'flex';
+    modalOverlay.style.justifyContent = 'center';
+    modalOverlay.style.alignItems = 'center';
+    modalOverlay.style.zIndex = '1000';
+
+    const modalContent = document.createElement('div');
+    modalContent.style.backgroundColor = '#fff';
+    modalContent.style.padding = '20px';
+    modalContent.style.borderRadius = '8px';
+    modalContent.style.width = '80%';
+    modalContent.style.maxWidth = '600px';
+    modalContent.innerHTML = `
+        <h2>Save Your Text</h2>
+        <label>Heading:</label><br>
+        <input type="text" id="save-heading" style="width: 100%;"><br><br>
+        <button id="save-text-submit">Save</button>
+        <button id="save-text-cancel">Cancel</button>
+    `;
+    modalOverlay.appendChild(modalContent);
+    document.body.appendChild(modalOverlay);
+
+    document.getElementById('save-text-submit').addEventListener('click', () => {
+        const heading = document.getElementById('save-heading').value.trim();
+        // Instead of immediately removing, update modal content:
+        modalContent.innerHTML = `<h2>Text saved successfully</h2>`;
+        setTimeout(() => {
+            if(document.body.contains(modalOverlay)) {
+                document.body.removeChild(modalOverlay);
+            }
+            callback(heading);
+        }, 1000); // wait 1 second before closing
+    });
+    document.getElementById('save-text-cancel').addEventListener('click', () => {
+        document.body.removeChild(modalOverlay);
+    });
+}
+
+// Replace existing saveTextBtn event listener:
+saveTextBtn.addEventListener('click', function() {
+    const textValue = customText.innerText.trim();
+    if (!textValue) return;
+    openSaveTextModal(function(heading) {
+        if (!heading) return;
+        let saved = JSON.parse(localStorage.getItem('savedTexts') || '[]');
+        saved.push({ heading, text: textValue });
+        localStorage.setItem('savedTexts', JSON.stringify(saved));
+        showModalAutoDismiss("Text saved!");
+    });
+});
+
+const viewSavedBtn = document.getElementById('view-saved-btn');
+
+// Update customTextRadio event listener:
+customTextRadio.addEventListener('change', () => {
+    randomWordCountSelect.value = "100";
+    customWordCountInput.value = "";
+    customWordCountInput.disabled = true;
+    randomTextGroup.style.display = 'none';
+    uploadContainer.style.display = 'block';
+    // NEW: Check if saved texts exist and toggle the View Saved Texts button
+    let saved = JSON.parse(localStorage.getItem('savedTexts') || '[]');
+    if (saved.length > 0) {
+        viewSavedBtn.style.display = 'inline-block';
+    } else {
+        viewSavedBtn.style.display = 'none';
+    }
+});
+
+// NEW: When View Saved Texts button is clicked, navigate to the saved texts page
+viewSavedBtn.addEventListener('click', () => {
+    window.location.href = 'saved-texts.html';
+});
+
+// At the start of your script, add this to check for a saved text to use:
+document.addEventListener('DOMContentLoaded', function() {
+    const useTextValue = localStorage.getItem("useSavedText");
+    if (useTextValue) {
+        // Select and check the custom-text radio button
+        document.getElementById('custom-text-radio').checked = true;
+        // Dispatch change event to update UI accordingly
+        document.getElementById('custom-text-radio').dispatchEvent(new Event('change', { bubbles: true }));
+        // Paste the saved text into the custom-text field
+        document.getElementById('custom-text').innerText = useTextValue;
+        // Remove the temporary key
+        localStorage.removeItem("useSavedText");
     }
 });

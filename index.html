@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <form id="setup-form">
-            <h1>English Typing Test</h1>
+            <h1 onclick="window.location.href='index.html';" style="cursor: pointer;">Typing Exam Practice</h1>
             <label>
                 <input type="radio" name="text-option" id="random-text-radio" value="random" checked>
                 Random text
@@ -39,7 +39,11 @@
                 </div>
                 <div class="upload-inline">
                     <span>or</span>
-                    <button type="button" id="upload-btn">Upload</button>
+                    <button type="button" id="upload-btn">Upload New Text</button>
+                    <!-- NEW: Save Text button -->
+                    <button type="button" id="save-text-btn" style="display:none;">Save Text</button>
+                    <!-- NEW: View Saved Texts button -->
+                    <button type="button" id="view-saved-btn" style="display:none;">View Saved Texts</button>
                 </div>
                 <input type="file" id="file-input" accept=".txt" style="display: none;">
             </div>
@@ -67,7 +71,7 @@
         </form>
         <div id="typing-test" class="typing-test">
             <div class="top-section">
-                <h1>English Typing Test</h1>
+                <h1 onclick="window.location.href='index.html';" style="cursor: pointer;">Typing Exam Practice</h1>
                 <div class="timer" id="timer-display">Time: 0:00</div>
             </div>
 
