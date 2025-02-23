@@ -1,29 +1,3 @@
-document.getElementById('setup-form').addEventListener('submit', function(event) {
-    event.preventDefault();
-
-    // Check which radio is selected
-    if (randomTextRadio.checked) {
-      let count = parseInt(randomWordCountSelect.value);
-      if (randomWordCountSelect.value === 'custom') {
-        count = parseInt(customWordCountInput.value) || 50;
-      }
-      // Generate random text
-      const randomText = getRandomWords(count);
-      startTypingTest(randomText, resolveSelectedTime());
-    } else {
-      // ...existing custom text check...
-      const customTextEl = document.getElementById('custom-text');
-      const customText = customTextEl.innerText.trim();
-      if (!customText) {
-        customTextEl.classList.add('input-error');
-        return;
-      } else {
-        customTextEl.classList.remove('input-error');
-      }
-      startTypingTest(customText, resolveSelectedTime());
-    }
-});
-
 document.getElementById('custom-text').addEventListener('input', function() {
     if (this.innerText.trim()) {
         this.classList.remove('input-error');
@@ -90,10 +64,14 @@ if (randomTextRadio.checked) {
 randomTextRadio.addEventListener('change', () => {
   randomTextGroup.style.display = 'block';
   uploadContainer.style.display = 'none';
+  customWordCountInput.disabled = false;
 });
 customTextRadio.addEventListener('change', () => {
-  randomTextGroup.style.display = 'none';
-  uploadContainer.style.display = 'block';
+    randomWordCountSelect.value = "100";
+    customWordCountInput.value = ""; 
+    customWordCountInput.disabled = true;
+    randomTextGroup.style.display = 'none';
+    uploadContainer.style.display = 'block';
 });
 
 // Toggle custom word count input
@@ -101,10 +79,38 @@ randomWordCountSelect.addEventListener('change', () => {
   if (randomWordCountSelect.value === 'custom') {
     customWordCountInput.style.display = 'inline-block';
     customWordCountInput.required = true;
+    customWordCountInput.disabled = false;
   } else {
     customWordCountInput.style.display = 'none';
     customWordCountInput.required = false;
+    customWordCountInput.disabled = true;
   }
+});
+
+document.getElementById('setup-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    // Check which radio is selected
+    if (randomTextRadio.checked) {
+      let count = parseInt(randomWordCountSelect.value);
+      if (randomWordCountSelect.value === 'custom') {
+        count = parseInt(customWordCountInput.value) || 50;
+      }
+      // Generate random text
+      const randomText = getRandomWords(count);
+      startTypingTest(randomText, resolveSelectedTime());
+    } else {
+      // ...existing custom text check...
+      const customTextEl = document.getElementById('custom-text');
+      const customText = customTextEl.innerText.trim();
+      if (!customText) {
+        customTextEl.classList.add('input-error');
+        return;
+      } else {
+        customTextEl.classList.remove('input-error');
+      }
+      startTypingTest(customText, resolveSelectedTime());
+    }
 });
 
 // Generate random words
