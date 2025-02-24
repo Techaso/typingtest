@@ -157,6 +157,8 @@ function sanitizeQuotesAndDashes(str) {
 
 function startTypingTest(text, time) {
     document.getElementById('setup-form').style.display = 'none';
+    // Set container max-width to 1000px when test starts
+    document.querySelector('.container').style.maxWidth = '1000px';
     const typingTest = document.getElementById('typing-test');
     // Sanitize original text
     text = sanitizeQuotesAndDashes(text);
@@ -314,8 +316,9 @@ function updateTimerDisplay(time) {
 }
 
 function calculateSpeed(charsTyped, elapsedTime) {
-    // New Code: Change heading text
-    document.querySelector('.top-section h1').innerText = "Test Results";
+    const h2 = document.createElement('h2');
+    h2.innerText = "Test Results";
+    document.querySelector('.top-section').appendChild(h2);
     
     // Use the typed text from the typing-input once
     const inputText = document.getElementById('typing-input').innerText;
@@ -421,9 +424,6 @@ function calculateSpeed(charsTyped, elapsedTime) {
 
     // Disable further editing of the typing input
     document.getElementById('typing-input').setAttribute('contenteditable', 'false');
-
-
-    updateParagraphHighlight(); // Re-render typing-text with extra spaces highlighted.
 }
 
 function updateWordCount() {
@@ -596,5 +596,26 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('custom-text').innerText = useTextValue;
         // Remove the temporary key
         localStorage.removeItem("useSavedText");
+    }
+});
+
+// Assume variables: currentMode (set based on mode-select) and expectedText (the complete test text)
+// Also assume the expected text is rendered in #typing-text as separate <span> elements per word.
+document.getElementById('typing-input').addEventListener('input', function(e) {
+    if (currentMode === 'practice') {
+        let typedText = e.target.innerText;
+        let expectedWords = expectedText.split(' ');
+        let typedWords = typedText.split(' ');
+        let wordSpans = document.getElementById('typing-text').querySelectorAll('span');
+        
+        typedWords.forEach((word, idx) => {
+            if (expectedWords[idx] !== undefined) {
+                if (word.length > expectedWords[idx].length) {
+                    wordSpans[idx] && wordSpans[idx].classList.add('error');
+                } else {
+                    wordSpans[idx] && wordSpans[idx].classList.remove('error');
+                }
+            }
+        });
     }
 });

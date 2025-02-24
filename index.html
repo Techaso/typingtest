@@ -7,36 +7,40 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <h1 onclick="window.location.href='index.html';" style="cursor: pointer;">Typing Exam Practice</h1>
     <div class="container">
         <form id="setup-form">
-            <h1 onclick="window.location.href='index.html';" style="cursor: pointer;">Typing Exam Practice</h1>
-            <label>
-                <input type="radio" name="text-option" id="random-text-radio" value="random" checked>
-                Random text
-            </label>
-            <!-- Random text group shows only when Random text is selected -->
-            <div id="random-text-group">
-                <select id="randomWordCount" required>
-                    <option value="50">50 words</option>
-                    <option value="100" selected>100 words</option>
-                    <option value="200">200 words</option>
-                    <option value="500">500 words</option>
-                    <option value="custom">Custom</option>
-                </select>
-                <input type="number" id="customWordCount" name="customWordCount" placeholder="Enter number of words" style="display: none;">
+            <div id="random-text-div">
+                <label for="text-option">
+                    <input type="radio" name="text-option" id="random-text-radio" value="random" checked>
+                    <strong>Random Text</strong>
+                </label>
+                <!-- Random text group shows only when Random text is selected -->
+                <div id="random-text-group">
+                    <!-- <label for="randomWordCount">Select words:</label> -->
+                    <select id="randomWordCount" name="randomWordCount" required>
+                        <option value="50">50 words</option>
+                        <option value="100" selected>100 words</option>
+                        <option value="200">200 words</option>
+                        <option value="500">500 words</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <!-- <label for="customWordCount">Enter number of words: </label> -->
+                    <input type="number" id="customWordCount" name="customWordCount" placeholder="Enter number of words" style="display: none;">
+                </div>
             </div>
             <br>
-            <label>
+            <label for="text-option">
                 <input type="radio" name="text-option" id="custom-text-radio" value="custom">
-                Custom text
+                <strong>Custom Text</strong>
             </label>
 
             <!-- Upload container shows only when Custom text is selected -->
             <div class="upload-container" id="upload-container">
                 <div id="text-container">
                     <div id="custom-text" contenteditable="true" data-placeholder="Paste text here"></div>
-                    <div id="word-count" class="word-count"></div>  <!-- New word count element -->
                 </div>
+                <div id="word-count" class="word-count"></div>
                 <div class="upload-inline">
                     <span>or</span>
                     <button type="button" id="upload-btn">Upload New Text</button>
@@ -48,30 +52,35 @@
                 <input type="file" id="file-input" accept=".txt" style="display: none;">
             </div>
             <br>
-            Select time limit:
-            <select id="timer" required>
-                <option value="custom">Custom</option>
-                <option value="1" selected>1 minute</option>
-                <option value="2">2 minutes</option>
-                <option value="5">5 minutes</option>
-                <option value="10">10 minutes</option>
-                <option value="15">15 minutes</option>
-                <option value="20">20 minutes</option>
-            </select>
-            <input type="number" id="custom-timer" placeholder="Enter time (minutes)" style="display: none;" />
+            <div id="timer-div">
+                <label for="timer">Select Time Limit:</label>
+                <select id="timer" name="timer" required>
+                    <option value="custom">Custom</option>
+                    <option value="1" selected>1 minute</option>
+                    <option value="2">2 minutes</option>
+                    <option value="5">5 minutes</option>
+                    <option value="10">10 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="20">20 minutes</option>
+                </select>
+                <input type="number" id="custom-timer" name="custom-timer" placeholder="Enter time (minutes)" style="display: none;" />
+            </div>
+            
             <br>
-            Select Mode:
-            <select id="mode-select" required>
-                <option value="practice" selected>Practice Mode</option>
-                <option value="exam">Exam Mode</option>
-                <option value="blind">Blind Test</option> <!-- NEW option added -->
-            </select>
+            <div id="mode-div">
+                <label for="mode-select">Select Mode:</label>
+                <select id="mode-select" name="mode-select" required>
+                    <option value="practice" selected>Practice Mode</option>
+                    <option value="exam">Exam Mode</option>
+                    <option value="blind">Blind Test</option> <!-- NEW option added -->
+                </select>
+            </div>
             <br>
             <button type="submit" id="startbtn">Start Test</button>
         </form>
         <div id="typing-test" class="typing-test">
             <div class="top-section">
-                <h1 onclick="window.location.href='index.html';" style="cursor: pointer;">Typing Exam Practice</h1>
+                <!-- <h1 onclick="window.location.href='index.html';" style="cursor: pointer;">Typing Exam Practice</h1> -->
                 <div class="timer" id="timer-display">Time: 0:00</div>
             </div>
 
