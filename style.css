@@ -47,7 +47,7 @@ form {
     border-radius: 4px;
     cursor: pointer;
     margin: 20px auto 0 auto;
-    width: 150px;
+    width: 200px;
 }
 
 #startbtn:hover {
@@ -147,23 +147,40 @@ form {
     background-color: #f5f5f5;
 }
 
-#timer-div, #mode-div, #random-text-group{
+#timer-div, #mode-div, #random-text-group, #radio-group {
     width: 100%;
     margin: auto;
+    margin-top: 5px;
     display: flex;
-    justify-content: space-between; /* pushes the input to the right */
+    justify-content: space-between; /* pushes the select to the right */
     align-items: center;
 }
 
-#timer, #mode-select, #randomWordCount {
+#timer, #mode-select, #randomWordCount,#radio-group {
     width: 50%;
 }
-#randomWordCount {
-    margin-top: 10px;
-}
+
 
 /* NEW: error styling for practice mode highlighting */
 .error {
   background-color: #ffcccc;
   /* Optionally, you can add additional styles like color or border */
+}
+
+/* Radio button layout */
+#text-options-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    justify-content: space-between;
+}
+
+.radio-option {
+    margin-right: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.radio-option input[type="radio"] {
+    margin-right: 5px;
 }

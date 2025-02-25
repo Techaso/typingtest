@@ -60,11 +60,11 @@ const customWordCountInput = document.getElementById('customWordCount');
 
 // Show/hide sections based on initial selection
 if (randomTextRadio.checked) {
-  randomTextGroup.style.display = 'block';
+  randomTextGroup.style.display = 'flex';  // Changed from 'block' to 'flex'
   uploadContainer.style.display = 'none';
 }
 randomTextRadio.addEventListener('change', () => {
-  randomTextGroup.style.display = 'block';
+  randomTextGroup.style.display = 'flex';  // Changed from 'block' to 'flex'
   uploadContainer.style.display = 'none';
   customWordCountInput.disabled = false;
 });
@@ -519,8 +519,9 @@ function openSaveTextModal(callback) {
     modalContent.style.maxWidth = '600px';
     modalContent.innerHTML = `
         <h2>Save Your Text</h2>
-        <label>Heading:</label><br>
-        <input type="text" id="save-heading" style="width: 100%;"><br><br>
+        <label>Heading: <span style="color: red;">*</span></label><br>
+        <input type="text" id="save-heading" style="width: 100%;" required>
+        <p id="heading-error" style="color: red; display: none;">Heading is required</p><br>
         <button id="save-text-submit">Save</button>
         <button id="save-text-cancel">Cancel</button>
     `;
@@ -529,7 +530,16 @@ function openSaveTextModal(callback) {
 
     document.getElementById('save-text-submit').addEventListener('click', () => {
         const heading = document.getElementById('save-heading').value.trim();
-        // Instead of immediately removing, update modal content:
+        const errorElement = document.getElementById('heading-error');
+        
+        // Validate the heading field
+        if (!heading) {
+            errorElement.style.display = 'block';
+            return; // Stop execution if heading is empty
+        }
+        
+        // If heading is valid, continue with saving
+        errorElement.style.display = 'none';
         modalContent.innerHTML = `<h2>Text saved successfully</h2>`;
         setTimeout(() => {
             if(document.body.contains(modalOverlay)) {
@@ -538,6 +548,7 @@ function openSaveTextModal(callback) {
             callback(heading);
         }, 1000); // wait 1 second before closing
     });
+    
     document.getElementById('save-text-cancel').addEventListener('click', () => {
         document.body.removeChild(modalOverlay);
     });

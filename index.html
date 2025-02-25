@@ -10,48 +10,50 @@
     <h1 onclick="window.location.href='index.html';" style="cursor: pointer;">Typing Exam Practice</h1>
     <div class="container">
         <form id="setup-form">
-            <div id="random-text-div">
-                <label for="text-option">
-                    <input type="radio" name="text-option" id="random-text-radio" value="random" checked>
-                    <strong>Random Text</strong>
-                </label>
-                <!-- Random text group shows only when Random text is selected -->
-                <div id="random-text-group">
-                    <!-- <label for="randomWordCount">Select words:</label> -->
-                    <select id="randomWordCount" name="randomWordCount" required>
-                        <option value="50">50 words</option>
-                        <option value="100" selected>100 words</option>
-                        <option value="200">200 words</option>
-                        <option value="500">500 words</option>
-                        <option value="custom">Custom</option>
-                    </select>
-                    <!-- <label for="customWordCount">Enter number of words: </label> -->
-                    <input type="number" id="customWordCount" name="customWordCount" placeholder="Enter number of words" style="display: none;">
+            <div id="text-options-container">
+                <label for="text-option">Select Text Type: </label>
+                <div id="radio-group">
+                    <label for="text-option" class="radio-option">
+                        <input type="radio" name="text-option" id="random-text-radio" value="random" checked>
+                        <strong>Random Text</strong>
+                    </label>
+                    <label for="text-option" class="radio-option">
+                        <input type="radio" name="text-option" id="custom-text-radio" value="custom">
+                        <strong>Custom Text</strong>
+                    </label>
                 </div>
             </div>
-            <br>
-            <label for="text-option">
-                <input type="radio" name="text-option" id="custom-text-radio" value="custom">
-                <strong>Custom Text</strong>
-            </label>
-
-            <!-- Upload container shows only when Custom text is selected -->
-            <div class="upload-container" id="upload-container">
-                <div id="text-container">
-                    <div id="custom-text" contenteditable="true" data-placeholder="Paste text here"></div>
-                </div>
-                <div id="word-count" class="word-count"></div>
-                <div class="upload-inline">
-                    <span>or</span>
-                    <button type="button" id="upload-btn">Upload New Text</button>
-                    <!-- NEW: Save Text button -->
-                    <button type="button" id="save-text-btn" style="display:none;">Save Text</button>
-                    <!-- NEW: View Saved Texts button -->
-                    <button type="button" id="view-saved-btn" style="display:none;">View Saved Texts</button>
-                </div>
-                <input type="file" id="file-input" accept=".txt" style="display: none;">
+            
+            <!-- Random text group shows only when Random text is selected -->
+            <div id="random-text-group">
+                <label for="randomWordCount">Select Words Limit:</label>
+                <select id="randomWordCount" name="randomWordCount" required>
+                    <option value="50">50 words</option>
+                    <option value="100" selected>100 words</option>
+                    <option value="200">200 words</option>
+                    <option value="500">500 words</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <input type="number" id="customWordCount" name="customWordCount" placeholder="Enter limit" style="display: none;">
             </div>
-            <br>
+            <div id="custom-text-group">
+                <div class="upload-container" id="upload-container">
+                    <div id="text-container">
+                        <div id="custom-text" contenteditable="true" data-placeholder="Paste text here"></div>
+                    </div>
+                    <div id="word-count" class="word-count"></div>
+                    <div class="upload-inline">
+                        <span>or</span>
+                        <button type="button" id="upload-btn">Upload New Text</button>
+                        <!-- NEW: Save Text button -->
+                        <button type="button" id="save-text-btn" style="display:none;">Save Text</button>
+                        <!-- NEW: View Saved Texts button -->
+                        <button type="button" id="view-saved-btn" style="display:none;">View Saved Texts</button>
+                    </div>
+                    <input type="file" id="file-input" accept=".txt" style="display: none;">
+                </div>
+            </div>
+            
             <div id="timer-div">
                 <label for="timer">Select Time Limit:</label>
                 <select id="timer" name="timer" required>
@@ -66,7 +68,6 @@
                 <input type="number" id="custom-timer" name="custom-timer" placeholder="Enter time (minutes)" style="display: none;" />
             </div>
             
-            <br>
             <div id="mode-div">
                 <label for="mode-select">Select Mode:</label>
                 <select id="mode-select" name="mode-select" required>
