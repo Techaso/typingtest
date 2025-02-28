@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Slabo+27px&display=swap');
 
 body {
-    font-family: 'Slabo', serif;
+    font-family: 'OpenSans-Regular';
     background-color:white;
     color: #333;
     margin: 0;
@@ -17,8 +17,8 @@ body {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 650px;
+    width: 60%;
+    max-width: 800px;
     display: flex;
     flex-direction: column;
 }
@@ -39,7 +39,7 @@ form {
     flex-direction: column;
 }
 
-#startbtn {
+#startbtn, #end-test {
     padding: 10px;
     background-color: #333;
     color: #fff;
@@ -48,6 +48,10 @@ form {
     cursor: pointer;
     margin: 20px auto 0 auto;
     width: 200px;
+}
+#end-test {
+    display: block;
+    margin: 0 auto;
 }
 
 #startbtn:hover {
@@ -75,12 +79,13 @@ form {
 }
 
 #custom-text, #typing-input, #typing-text {
-    width: 96%;
+    width: 95%;
     padding: 10px;
     height: 150px;
     overflow-y: auto;
-    font-family: 'Slabo', serif;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 22px;
+    line-height: 1.34;
     resize: none;
 }
 .typing-text {
@@ -160,12 +165,6 @@ form {
     width: 50%;
 }
 
-
-/* NEW: error styling for practice mode highlighting */
-.error {
-  background-color: #ffcccc;
-  /* Optionally, you can add additional styles like color or border */
-}
 
 /* Radio button layout */
 #text-options-container {

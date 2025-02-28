@@ -125,7 +125,7 @@ document.getElementById('setup-form').addEventListener('submit', function(event)
 // Generate random words
 function getRandomWords(count) {
   const words = [
-    'lorem','ipsum','dolor','sit','amet','consectetur','adipiscing','elit',
+    'lorem','Ipsum','dolor','sit','amet','consectetur','adipiscing','elit',
     'sed','do','eiusmod','tempor','incididunt','labore','et','dolore',
     'magna','aliqua','ut','enim','ad','minim','veniam','quis','nostrud',
     'exercitation','ullamco','laboris','nisi','aliquip','ex','commodo'
@@ -158,7 +158,7 @@ function sanitizeQuotesAndDashes(str) {
 function startTypingTest(text, time) {
     document.getElementById('setup-form').style.display = 'none';
     // Set container max-width to 1000px when test starts
-    document.querySelector('.container').style.maxWidth = '1000px';
+    // document.querySelector('.container').style.maxWidth = '1000px';
     const typingTest = document.getElementById('typing-test');
     // Sanitize original text
     text = sanitizeQuotesAndDashes(text);
@@ -198,20 +198,29 @@ function startTypingTest(text, time) {
     // });
 
     // Prevent insertion of extra space when editing text (if caret is not at end)
-    // typingInput.addEventListener('keydown', function(e) {
-    //     if (e.key === ' ') {
-    //         // Get caret position using window.getSelection for contenteditable
-    //         const sel = window.getSelection();
-    //         const pos = sel ? sel.anchorOffset : 0;
-    //         console.log('sel:', sel.anchorOffset);
-    //         console.log('position:', pos);
-    //         console.log('typing length:', typingInput.innerText.length);
-    //         // If caret is not at the end and previous character is already a space, prevent extra insertion
-    //         if (pos < typingInput.innerText.length && pos > 0 && typingInput.innerText[pos - 1] === ' ') {
-    //             e.preventDefault();
-    //         }
-    //     }
-    // });
+    typingInput.addEventListener('keydown', function(e) {
+        if (e.key === ' ' || e.key === '\u00A0') {
+            if (!typingInput.innerText.trim()) {
+                e.preventDefault();
+                return;
+            }
+            // Get current selection
+            const selection = window.getSelection();
+            const pos = selection.anchorOffset;
+            const node = selection.anchorNode;
+            
+            // Check if we're in a text node
+            if (node && node.nodeType === Node.TEXT_NODE) {
+                // Check if previous character is a space
+                if (pos > 0 && (node.textContent[pos - 1] === ' ' || node.textContent[pos - 1] === '\u00A0')) {
+                    e.preventDefault();
+                }
+            } else if (typingInput.innerText.endsWith(' ') || typingInput.innerText.endsWith('\u00A0')) {
+                // If we're at the end of content or between nodes, check the last character
+                e.preventDefault();
+            }
+        }
+    });
 
     // Set initial timer display based on user provided time
     updateTimerDisplay(time);
@@ -231,21 +240,32 @@ function startTypingTest(text, time) {
     }
 
     typingInput.addEventListener('input', function() {
-        // console.log('input event');
         const inputValue = sanitizeQuotesAndDashes(typingInput.innerText);
-        // console.log('inputValue:', inputValue, inputValue.length);
-        const typedWordsArr = inputValue.split(/\s+/);
+        let spaceCount = 0;
+        let i = inputValue.length - 1;
+        while (i >= 0 && (inputValue[i] === ' ' || inputValue[i] === '\u00A0')) {
+            spaceCount++;
+            i--;
+        }
+        // console.log(`Consecutive spaces typed: ${spaceCount}`);
+        
+        let typedWordsArr;
+        if (inputValue.trim() === '') {
+            typedWordsArr = [];
+        } else {
+            // Remove empty entries caused by leading/trailing spaces
+            typedWordsArr = inputValue.split(/\s+/).filter(word => word !== '');
+        }
+        // console.log('typedWordsArr:', typedWordsArr);
+
         const originalWordsArr = text.split(/\s+/);
         const currentMode = modeSelect.value;
         let currentWordHTML = '';
         let newHTML = '';
         let overallIndex = 0;
-        // Declare only once:
-        let currentWordIndex = inputValue == '\n' ? 0 : (inputValue.endsWith(' ') ? typedWordsArr.length : typedWordsArr.length - 1);
+        let currentWordIndex;
 
         if(inputValue === '\n' && currentMode === 'practice') {
-            // currentWordHTML += `<span>${word}</span>`;
-            // currentWordIndex = -1;
             typingInput.style.filter = "none";
             // Rebuild the typing text without any color or background styles.
             let plainHTML = '';
@@ -258,19 +278,53 @@ function startTypingTest(text, time) {
             }
             typingTextContainer.innerHTML = plainHTML;
             currentWordHTML = `<span style="background-color: yellow;">${originalWordsArr[0]}</span>`;
+            currentWordIndex = 0;
+        } else if (inputValue.endsWith(' ') || inputValue.endsWith('\u00A0')) {
+            // If input ends with space, point to the next word
+            // console.log("spaceCount:", spaceCount);
+            currentWordIndex = Math.min(typedWordsArr.length + spaceCount - 1, originalWordsArr.length - 1);
+        } else {
+            // User is currently typing a word
+            // console.log("spaceCount1:", spaceCount);
+            currentWordIndex = Math.min(typedWordsArr.length + spaceCount - 1, originalWordsArr.length - 1);
         }
+        // console.log('Calculated currentWordIndex:', currentWordIndex);
         // console.log('orginalWordArr:', originalWordsArr);
         
         for (let w = 0; w < originalWordsArr.length; w++) {
             currentWordHTML = '';
             const word = originalWordsArr[w];
+            // return;
             const typedWord = w < typedWordsArr.length ? typedWordsArr[w] : '';
+            // if (w != currentWordIndex) {
+            //     for (let c = 0; c < word.length; c++) {
+            //         if (currentMode === 'practice') {
+                        
+            //         }
+            //         currentWordHTML += `<span>${word[c]}</span>`;
+            //         overallIndex++;
+            //     }
+            //     newHTML += currentWordHTML;
+            //     while (overallIndex < text.length && (text[overallIndex] === ' ' || text[overallIndex] === '\n')) {
+            //         if (text[overallIndex] === ' ') {
+            //             newHTML += ((inputValue[overallIndex] === ' ') && (currentMode === 'practice') ? `<span style="color: green;"> </span>` : `<span> </span>`);
+            //         } else if (text[overallIndex] === '\n') {
+            //             newHTML += '<br>';
+            //         }
+            //         overallIndex++;
+            //     }
+            //     continue;
+            // }
+            // return;
+            // console.log("newHTML:", newHTML);
+            // console.log(`Word index: ${w}, Current word index: ${currentWordIndex}, Word: ${word}`);
             // console.log('word:', word, 'typedWord:', typedWord);
             // return;
-            for (let c = 0; c < word.length; c++) {
+            
+            for (c = 0; c < word.length; c++) {
                 let spanStyle = "";
                 if (currentMode === 'practice') {
-                    if (w === currentWordIndex) {
+                    if (w == currentWordIndex) {
                         if (c < typedWord.length) {
                             spanStyle = (typedWord[c] === word[c]) ? 'style="color: green;"' : 'style="color: red;"';
                         }
@@ -466,6 +520,12 @@ function calculateSpeed(charsTyped, elapsedTime) {
 
     // Disable further editing of the typing input
     document.getElementById('typing-input').setAttribute('contenteditable', 'false');
+
+    // Remove the bottom-section element
+    const bottomSection = document.querySelector('.bottom-section');
+    const endTestContainer = document.querySelector('.end-test-container');
+    bottomSection.remove();
+    endTestContainer.remove();
 }
 
 function updateWordCount() {
@@ -651,25 +711,3 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem("useSavedText");
     }
 });
-
-// Assume variables: currentMode (set based on mode-select) and expectedText (the complete test text)
-// // Also assume the expected text is rendered in #typing-text as separate <span> elements per word.
-// document.getElementById('typing-input').addEventListener('input', function(e) {
-//     const currentMode = modeSelect.value;
-//     if (currentMode === 'practice') {
-//         let typedText = e.target.innerText;
-//         let expectedWords = window.originalText.split(' ');
-//         let typedWords = typedText.split(' ');
-//         let wordSpans = document.getElementById('typing-text').querySelectorAll('span');
-        
-//         typedWords.forEach((word, idx) => {
-//             if (expectedWords[idx] !== undefined) {
-//                 if (word.length > expectedWords[idx].length) {
-//                     wordSpans[idx] && wordSpans[idx].classList.add('error');
-//                 } else {
-//                     wordSpans[idx] && wordSpans[idx].classList.remove('error');
-//                 }
-//             }
-//         });
-//     }
-// });
