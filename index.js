@@ -16,6 +16,7 @@ document.getElementById('file-input').addEventListener('change', (e) => {
             document.getElementById('custom-text').innerText = sanitizeQuotesAndDashes(event.target.result);
             updateWordCount();
             e.target.value = ""; // clear file input to avoid conflicts
+            document.getElementById('custom-text').dispatchEvent(new Event('input', { bubbles: true }));
         };
         reader.readAsText(e.target.files[0]);
     }
