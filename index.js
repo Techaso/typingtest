@@ -198,17 +198,20 @@ function startTypingTest(text, time) {
     // });
 
     // Prevent insertion of extra space when editing text (if caret is not at end)
-    typingInput.addEventListener('keydown', function(e) {
-        if (e.key === ' ') {
-            // Get caret position using window.getSelection for contenteditable
-            const sel = window.getSelection();
-            const pos = sel ? sel.anchorOffset : 0;
-            // If caret is not at the end and previous character is already a space, prevent extra insertion
-            if (pos < typingInput.innerText.length && pos > 0 && typingInput.innerText[pos - 1] === ' ') {
-                e.preventDefault();
-            }
-        }
-    });
+    // typingInput.addEventListener('keydown', function(e) {
+    //     if (e.key === ' ') {
+    //         // Get caret position using window.getSelection for contenteditable
+    //         const sel = window.getSelection();
+    //         const pos = sel ? sel.anchorOffset : 0;
+    //         console.log('sel:', sel.anchorOffset);
+    //         console.log('position:', pos);
+    //         console.log('typing length:', typingInput.innerText.length);
+    //         // If caret is not at the end and previous character is already a space, prevent extra insertion
+    //         if (pos < typingInput.innerText.length && pos > 0 && typingInput.innerText[pos - 1] === ' ') {
+    //             e.preventDefault();
+    //         }
+    //     }
+    // });
 
     // Set initial timer display based on user provided time
     updateTimerDisplay(time);
@@ -228,19 +231,42 @@ function startTypingTest(text, time) {
     }
 
     typingInput.addEventListener('input', function() {
+        // console.log('input event');
         const inputValue = sanitizeQuotesAndDashes(typingInput.innerText);
+        // console.log('inputValue:', inputValue, inputValue.length);
         const typedWordsArr = inputValue.split(/\s+/);
         const originalWordsArr = text.split(/\s+/);
         const currentMode = modeSelect.value;
+        let currentWordHTML = '';
         let newHTML = '';
         let overallIndex = 0;
         // Declare only once:
-        let currentWordIndex = inputValue === '' ? 0 : (inputValue.endsWith(' ') ? typedWordsArr.length : typedWordsArr.length - 1);
+        let currentWordIndex = inputValue == '\n' ? 0 : (inputValue.endsWith(' ') ? typedWordsArr.length : typedWordsArr.length - 1);
+
+        if(inputValue === '\n' && currentMode === 'practice') {
+            // currentWordHTML += `<span>${word}</span>`;
+            // currentWordIndex = -1;
+            typingInput.style.filter = "none";
+            // Rebuild the typing text without any color or background styles.
+            let plainHTML = '';
+            for (let i = 0; i < text.length; i++) {
+                if (text[i] === '\n') {
+                    plainHTML += '<br>';
+                } else {
+                    plainHTML += `<span>${text[i]}</span>`;
+                }
+            }
+            typingTextContainer.innerHTML = plainHTML;
+            currentWordHTML = `<span style="background-color: yellow;">${originalWordsArr[0]}</span>`;
+        }
+        // console.log('orginalWordArr:', originalWordsArr);
         
         for (let w = 0; w < originalWordsArr.length; w++) {
-            let currentWordHTML = '';
+            currentWordHTML = '';
             const word = originalWordsArr[w];
             const typedWord = w < typedWordsArr.length ? typedWordsArr[w] : '';
+            // console.log('word:', word, 'typedWord:', typedWord);
+            // return;
             for (let c = 0; c < word.length; c++) {
                 let spanStyle = "";
                 if (currentMode === 'practice') {
@@ -272,8 +298,24 @@ function startTypingTest(text, time) {
             }
         }
         typingTextContainer.innerHTML = newHTML;
-        typingInput.setSelectionRange(inputValue.length, inputValue.length);
+        
+        // Fix: Replace setSelectionRange with proper Selection and Range API for contenteditable
+        // typingInput.setSelectionRange(inputValue.length, inputValue.length);
+        
+        // Set cursor at end of input content for contenteditable div
         typingInput.focus();
+        const range = document.createRange();
+        const selection = window.getSelection();
+        
+        // Make sure there's content in the element first
+        if (typingInput.childNodes.length > 0) {
+            const lastNode = typingInput.childNodes[typingInput.childNodes.length - 1];
+            range.setStart(lastNode, lastNode.length);
+            range.collapse(true);
+            
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
     });
     
     timerStarted = false;
@@ -611,22 +653,23 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Assume variables: currentMode (set based on mode-select) and expectedText (the complete test text)
-// Also assume the expected text is rendered in #typing-text as separate <span> elements per word.
-document.getElementById('typing-input').addEventListener('input', function(e) {
-    if (currentMode === 'practice') {
-        let typedText = e.target.innerText;
-        let expectedWords = expectedText.split(' ');
-        let typedWords = typedText.split(' ');
-        let wordSpans = document.getElementById('typing-text').querySelectorAll('span');
+// // Also assume the expected text is rendered in #typing-text as separate <span> elements per word.
+// document.getElementById('typing-input').addEventListener('input', function(e) {
+//     const currentMode = modeSelect.value;
+//     if (currentMode === 'practice') {
+//         let typedText = e.target.innerText;
+//         let expectedWords = window.originalText.split(' ');
+//         let typedWords = typedText.split(' ');
+//         let wordSpans = document.getElementById('typing-text').querySelectorAll('span');
         
-        typedWords.forEach((word, idx) => {
-            if (expectedWords[idx] !== undefined) {
-                if (word.length > expectedWords[idx].length) {
-                    wordSpans[idx] && wordSpans[idx].classList.add('error');
-                } else {
-                    wordSpans[idx] && wordSpans[idx].classList.remove('error');
-                }
-            }
-        });
-    }
-});
+//         typedWords.forEach((word, idx) => {
+//             if (expectedWords[idx] !== undefined) {
+//                 if (word.length > expectedWords[idx].length) {
+//                     wordSpans[idx] && wordSpans[idx].classList.add('error');
+//                 } else {
+//                     wordSpans[idx] && wordSpans[idx].classList.remove('error');
+//                 }
+//             }
+//         });
+//     }
+// });
