@@ -78,7 +78,7 @@ form {
     margin: 10px 0;
 }
 
-#custom-text, #typing-input, #typing-text {
+#custom-text, #typing-input, #typed-text, #typed-text-analysis, #typing-text-live {
     width: 95%;
     padding: 10px;
     height: 150px;
@@ -88,7 +88,7 @@ form {
     line-height: 1.34;
     resize: none;
 }
-.typing-text {
+.typed-text, #typed-text-analysis, #typing-text-live {
     background-color: #f8f9fa;
     margin:10px;
     /* text-align: justify; */
@@ -183,3 +183,8 @@ form {
 .radio-option input[type="radio"] {
     margin-right: 5px;
 }
+
+.incorrect-word span {
+    color: white !important;
+    background-color: red;
+  }

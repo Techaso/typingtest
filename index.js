@@ -1,3 +1,6 @@
+const styledTypedText = document.getElementById('typed-text');
+const typingTextLive = document.getElementById('typing-text-live');
+
 document.getElementById('custom-text').addEventListener('input', function() {
     if (this.innerText.trim()) {
         this.classList.remove('input-error');
@@ -109,6 +112,7 @@ document.getElementById('setup-form').addEventListener('submit', function(event)
       // Generate random text
       const randomText = getRandomWords(count);
       startTypingTest(randomText, resolveSelectedTime());
+    //   styleTypedText(randomText);
     } else {
       // ...existing custom text check...
       const customTextEl = document.getElementById('custom-text');
@@ -120,6 +124,7 @@ document.getElementById('setup-form').addEventListener('submit', function(event)
         customTextEl.classList.remove('input-error');
       }
       startTypingTest(customText, resolveSelectedTime());
+    //   styleTypedText(customText);
     }
 });
 
@@ -155,8 +160,7 @@ function sanitizeQuotesAndDashes(str) {
         .replace(/[“”]/g, '"')
         .replace(/—/g, "--");
 }
-
-function startTypingTest(text, time) {
+function styleTypedText(text){
     document.getElementById('setup-form').style.display = 'none';
     // Set container max-width to 1000px when test starts
     // document.querySelector('.container').style.maxWidth = '1000px';
@@ -167,7 +171,10 @@ function startTypingTest(text, time) {
     text = text.split('\n').map(line => line.replace(/\s+/g, ' ')).join('\n');
     window.originalText = text;
     
-    const typingTextContainer = document.getElementById('typing-text');
+    const typingTextContainer = document.getElementById('typed-text');
+    if(!typingTextContainer){
+        return;
+    }
     // Improved rendering for large text using a DocumentFragment.
     const fragment = document.createDocumentFragment();
     for (let i = 0; i < text.length; i++) {
@@ -222,23 +229,6 @@ function startTypingTest(text, time) {
             }
         }
     });
-
-    // Set initial timer display based on user provided time
-    updateTimerDisplay(time);
-    
-    // Live update: compare each letter with provided text
-    let timerStarted = false;
-    let startTime, interval;
-
-    // Initialize currentWordIndex at 0
-    let currentWordIndex = 0;
-
-    // NEW: Set blur based on mode when test starts.
-    if (modeSelect.value === 'blind') {
-        typingInput.style.filter = "blur(8px)";
-    } else {
-        typingInput.style.filter = "";
-    }
 
     typingInput.addEventListener('input', function() {
         const inputValue = sanitizeQuotesAndDashes(typingInput.innerText);
@@ -338,6 +328,243 @@ function startTypingTest(text, time) {
                 // In exam mode, spanStyle remains empty.
                 currentWordHTML += `<span ${spanStyle}>${word[c]}</span>`;
                 overallIndex++;
+            }
+            if (w === currentWordIndex && currentMode === 'practice') {
+                currentWordHTML = `<span style="background-color: yellow;">${currentWordHTML}</span>`;
+            }
+            newHTML += currentWordHTML;
+            while (overallIndex < text.length && (text[overallIndex] === ' ' || text[overallIndex] === '\n')) {
+                if (text[overallIndex] === ' ') {
+                    newHTML += ((inputValue[overallIndex] === ' ') && (currentMode === 'practice') ? `<span style="color: green;"> </span>` : `<span> </span>`);
+                } else if (text[overallIndex] === '\n') {
+                    newHTML += '<br>';
+                }
+                overallIndex++;
+            }
+        }
+        typingTextContainer.innerHTML = newHTML;
+        
+        // Fix: Replace setSelectionRange with proper Selection and Range API for contenteditable
+        // typingInput.setSelectionRange(inputValue.length, inputValue.length);
+        
+        // Set cursor at end of input content for contenteditable div
+        typingInput.focus();
+        const range = document.createRange();
+        const selection = window.getSelection();
+        
+        // Make sure there's content in the element first
+        if (typingInput.childNodes.length > 0) {
+            const lastNode = typingInput.childNodes[typingInput.childNodes.length - 1];
+            range.setStart(lastNode, lastNode.length);
+            range.collapse(true);
+            
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+    });
+}
+
+function startTypingTest(text, time) {
+    document.getElementById('setup-form').style.display = 'none';
+    // Set container max-width to 1000px when test starts
+    // document.querySelector('.container').style.maxWidth = '1000px';
+    const typingTest = document.getElementById('typing-test');
+    // Sanitize original text
+    text = sanitizeQuotesAndDashes(text);
+    // Normalize each line to replace consecutive spaces with a single space.
+    text = text.split('\n').map(line => line.replace(/\s+/g, ' ')).join('\n');
+    window.originalText = text;
+    
+    const typingTextContainer = document.getElementById('typing-text-live');
+    // Improved rendering for large text using a DocumentFragment.
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '\n') {
+            fragment.appendChild(document.createElement('br'));
+        } else {
+            const span = document.createElement('span');
+            span.textContent = text[i];
+            fragment.appendChild(span);
+        }
+    }
+    typingTextContainer.innerHTML = '';
+    typingTextContainer.appendChild(fragment);
+    typingTest.classList.add('active');
+    const typingInput = document.getElementById('typing-input');
+    // Replace value clear with innerText clear
+    typingInput.innerText = '';
+    typingInput.focus();
+
+    // Disable copy, paste, cut, context menu and common shortcuts
+    // typingInput.addEventListener('cut', e => e.preventDefault());
+    // typingInput.addEventListener('paste', e => e.preventDefault());
+    // typingInput.addEventListener('copy', e => e.preventDefault());
+    // typingInput.addEventListener('contextmenu', e => e.preventDefault());
+    // typingInput.addEventListener('keydown', e => {
+    //     if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
+    //         e.preventDefault();
+    //     }
+    // });
+
+    // Prevent insertion of extra space when editing text (if caret is not at end)
+    typingInput.addEventListener('keydown', function(e) {
+        if (e.key === ' ' || e.key === '\u00A0') {
+            if (!typingInput.innerText.trim()) {
+                e.preventDefault();
+                return;
+            }
+            // Get current selection
+            const selection = window.getSelection();
+            const pos = selection.anchorOffset;
+            const node = selection.anchorNode;
+            
+            // Check if we're in a text node
+            if (node && node.nodeType === Node.TEXT_NODE) {
+                // Check if previous character is a space
+                if (pos > 0 && (node.textContent[pos - 1] === ' ' || node.textContent[pos - 1] === '\u00A0')) {
+                    e.preventDefault();
+                }
+            } else if (typingInput.innerText.endsWith(' ') || typingInput.innerText.endsWith('\u00A0')) {
+                // If we're at the end of content or between nodes, check the last character
+                e.preventDefault();
+            }
+        }
+    });
+
+    // Set initial timer display based on user provided time
+    updateTimerDisplay(time);
+    
+    // Live update: compare each letter with provided text
+    let timerStarted = false;
+    let startTime, interval;
+
+    // NEW: Set blur based on mode when test starts.
+    if (modeSelect.value === 'blind') {
+        typingInput.style.filter = "blur(8px)";
+    } else {
+        typingInput.style.filter = "";
+    }
+
+    typingInput.addEventListener('input', function() {
+        const inputValue = sanitizeQuotesAndDashes(typingInput.innerText);
+        let spaceCount = 0;
+        let i = inputValue.length - 1;
+        while (i >= 0 && (inputValue[i] === ' ' || inputValue[i] === '\u00A0')) {
+            spaceCount++;
+            i--;
+        }
+        // console.log(`Consecutive spaces typed: ${spaceCount}`);
+        
+        let typedWordsArr;
+        if (inputValue.trim() === '') {
+            typedWordsArr = [];
+        } else {
+            // Remove empty entries caused by leading/trailing spaces
+            typedWordsArr = inputValue.split(/\s+/).filter(word => word !== '');
+        }
+        // console.log('typedWordsArr:', typedWordsArr);
+
+        const originalWordsArr = text.split(/\s+/);
+        const currentMode = modeSelect.value;
+        let currentWordHTML = '';
+        let newHTML = '';
+        let overallIndex = 0;
+        let currentWordIndex;
+
+        if(inputValue === '\n' && currentMode === 'practice') {
+            typingInput.style.filter = "none";
+            // Rebuild the typing text without any color or background styles.
+            let plainHTML = '';
+            for (let i = 0; i < text.length; i++) {
+                if (text[i] === '\n') {
+                    plainHTML += '<br>';
+                } else {
+                    plainHTML += `<span>${text[i]}</span>`;
+                }
+            }
+            typingTextContainer.innerHTML = plainHTML;
+            currentWordHTML = `<span style="background-color: yellow;">${originalWordsArr[0]}</span>`;
+            currentWordIndex = 0;
+        } else if (inputValue.endsWith(' ') || inputValue.endsWith('\u00A0')) {
+            // If input ends with space, point to the next word
+            // console.log("spaceCount:", spaceCount);
+            currentWordIndex = Math.min(typedWordsArr.length + spaceCount - 1, originalWordsArr.length - 1);
+        } else {
+            // User is currently typing a word
+            // console.log("spaceCount1:", spaceCount);
+            currentWordIndex = Math.min(typedWordsArr.length + spaceCount - 1, originalWordsArr.length - 1);
+        }
+        // console.log('Calculated currentWordIndex:', currentWordIndex);
+        // console.log('orginalWordArr:', originalWordsArr);
+        // let evaluatedWords = [];
+        // if ((inputValue.endsWith(' ') || inputValue.endsWith('\u00A0')) && currentMode === 'practice') {
+        //     // When a word is completed, index = typedWordsArr.length - 1
+        //     const completedIndex = typedWordsArr.length - 1;
+        //     if (completedIndex >= 0 && evaluatedWords[completedIndex] === undefined) {
+        //       evaluatedWords[completedIndex] = (typedWordsArr[completedIndex] === originalWordsArr[completedIndex])
+        //         ? 'correct'
+        //         : 'incorrect';
+        //     }
+        //   }
+        for (let w = 0; w < originalWordsArr.length; w++) {
+            currentWordHTML = '';
+            const word = originalWordsArr[w];
+            // return;
+            const typedWord = w < typedWordsArr.length ? typedWordsArr[w] : '';
+            // if (w != currentWordIndex) {
+            //     for (let c = 0; c < word.length; c++) {
+            //         if (currentMode === 'practice') {
+                        
+            //         }
+            //         currentWordHTML += `<span>${word[c]}</span>`;
+            //         overallIndex++;
+            //     }
+            //     newHTML += currentWordHTML;
+            //     while (overallIndex < text.length && (text[overallIndex] === ' ' || text[overallIndex] === '\n')) {
+            //         if (text[overallIndex] === ' ') {
+            //             newHTML += ((inputValue[overallIndex] === ' ') && (currentMode === 'practice') ? `<span style="color: green;"> </span>` : `<span> </span>`);
+            //         } else if (text[overallIndex] === '\n') {
+            //             newHTML += '<br>';
+            //         }
+            //         overallIndex++;
+            //     }
+            //     continue;
+            // }
+            // return;
+            // console.log("newHTML:", newHTML);
+            // console.log(`Word index: ${w}, Current word index: ${currentWordIndex}, Word: ${word}`);
+            // console.log('word:', word, 'typedWord:', typedWord);
+            // return;
+            
+            for (c = 0; c < word.length; c++) {
+                let spanStyle = "";
+                if (currentMode === 'practice') {
+                    if (w == currentWordIndex) {
+                        if (c < typedWord.length) {
+                            spanStyle = (typedWord[c] === word[c]) ? 'style="color: green;"' : 'style="color: red;"';
+                        }
+                    } else {
+                        if (c < typedWord.length) {
+                            spanStyle = (typedWord[c] === word[c]) ? 'style="color: green;"' : 'style="color: red;"';
+                        }
+                    }
+                }
+                // In exam mode, spanStyle remains empty.
+                currentWordHTML += `<span ${spanStyle}>${word[c]}</span>`;
+                overallIndex++;
+            }
+            // Persisted evaluation: if this word was already evaluated as 'incorrect'
+            // if (evaluatedWords[w] === 'incorrect') {
+            //     currentWordHTML = `<span class="incorrect-word">${currentWordHTML}</span>`;
+            // }
+            // // Otherwise, if this is the current word being typed, apply yellow background.
+            // else if (w === currentWordIndex && currentMode === 'practice') {
+            //     currentWordHTML = `<span style="background-color: yellow;">${currentWordHTML}</span>`;
+            // }
+            if ((inputValue.endsWith(' ') || inputValue.endsWith('\u00A0')) && currentMode === 'practice' && w === typedWordsArr.length - 1) {
+                if (typedWord !== word) {
+                    currentWordHTML = `<span class="incorrect-word">${currentWordHTML}</span>`;
+                }
             }
             if (w === currentWordIndex && currentMode === 'practice') {
                 currentWordHTML = `<span style="background-color: yellow;">${currentWordHTML}</span>`;
