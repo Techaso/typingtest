@@ -183,8 +183,3 @@ form {
 .radio-option input[type="radio"] {
     margin-right: 5px;
 }
-
-.incorrect-word span {
-    color: white !important;
-    background-color: red;
-  }
