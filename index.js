@@ -26,6 +26,7 @@ const reloadButton = document.getElementById('reload-button');
 // Add these global variables
 let interval;
 let timerStarted = false;
+let excessCharacters = '';
 
 // Show/hide sections based on initial selection
 if (randomTextRadio.checked) {
@@ -464,6 +465,8 @@ function startTypingTest(text, time) {
             charSpans[i].style.color = '';
         }
         
+        excessCharacters = '';
+
         // Process each character that has been typed
         for (let i = 0; i < typedText.length; i++) {
             if (i < text.length) {
@@ -479,6 +482,15 @@ function startTypingTest(text, time) {
                 } else {
                     // Regular styling for non-space characters
                     charSpans[i].style.color = isCorrect ? 'green' : 'red';
+                }
+            } else {
+                // Handle excess characters
+                if (typedText[i] === ' ') {
+                    // Space with red background
+                    excessCharacters += '<span style="background-color: red;">&nbsp;</span>';
+                } else {
+                    // Regular character with red text
+                    excessCharacters += '<span style="color: red;">' + typedText[i] + '</span>';
                 }
             }
         }
@@ -633,7 +645,15 @@ function updateTimerDisplay(time) {
 function calculateSpeed(charsTyped, elapsedTime) {
     // Set flag that test is completed
     window.hasTestEnded = true;
-    reloadButton.innerHTML = '<i class="fas fa-redo-alt"></i> Retake Test';    
+    reloadButton.innerHTML = '<i class="fas fa-redo-alt"></i> Retake Test';  
+
+    if (excessCharacters) {
+        const excessDiv = document.createElement('div');
+        excessDiv.innerHTML = excessCharacters;
+        excessDiv.style.display = 'inline-block';
+        typingTextContainer.appendChild(excessDiv);
+    }
+
     // Get the typed text (with non-breaking spaces converted to regular spaces)
     const typedText = typingInput.innerText.replace(/\u00A0/g, ' ');
     const originalText = window.originalText;

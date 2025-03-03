@@ -10,7 +10,7 @@
 </head>
 <body>
     <div id="header-container">
-        <button class="home-button" id="home-button"><i class="fas fa-home"></i> Home</button>
+        <button class="home-button" id="home-button" onclick="navigateHome()"><i class="fas fa-home"></i> Home</button>
         <h1 id="website-heading">Typing Exam Practice</h1>
         <div class="header-spacer"></div> <!-- Empty div for flexbox alignment -->
     </div>
@@ -19,11 +19,11 @@
             <div id="text-options-container">
                 <label for="text-option">Select Text Type: </label>
                 <div id="radio-group">
-                    <label for="text-option" class="radio-option">
+                    <label for="random-text-radio" class="radio-option">
                         <input type="radio" name="text-option" id="random-text-radio" value="random" checked>
                         <strong>Random Text</strong>
                     </label>
-                    <label for="text-option" class="radio-option">
+                    <label for="custom-text-radio" class="radio-option">
                         <input type="radio" name="text-option" id="custom-text-radio" value="custom">
                         <strong>Custom Text</strong>
                     </label>
