@@ -20,6 +20,12 @@ const timerDisplay = document.getElementById('timer-display');
 const endTest = document.getElementById('end-test');
 const bottomSection = document.querySelector('.bottom-section');
 const endTestContainer = document.querySelector('.end-test-container');
+const websiteHeading = document.getElementById('website-heading');
+const reloadButton = document.getElementById('reload-button');
+
+// Add these global variables
+let interval;
+let timerStarted = false;
 
 // Show/hide sections based on initial selection
 if (randomTextRadio.checked) {
@@ -247,7 +253,6 @@ saveTextBtn.addEventListener('click', function() {
         if (viewSavedBtn) {
             viewSavedBtn.style.display = 'inline-block';
         }
-        showModalAutoDismiss("Text saved!");
     });
 });
 
@@ -296,6 +301,27 @@ function resolveSelectedTime() {
 }
 
 function startTypingTest(text, time) {
+    // Reset UI from any previous test
+    testResults.style.display = 'none';
+    bottomSection.style.display = 'flex';
+    endTestContainer.style.display = 'block';
+    timerDisplay.style.display = 'block';
+    typingInput.style.display = 'block';
+    // Reset contenteditable attribute to allow typing
+    typingInput.setAttribute('contenteditable', 'true');
+    
+    // Reset test state
+    window.hasTestEnded = false;
+    
+    // Clear any existing interval
+    if (interval) {
+        clearInterval(interval);
+        interval = null;
+    }
+    
+    // Reset timerStarted flag
+    timerStarted = false;
+    
     document.getElementById('setup-form').style.display = 'none';
     // Sanitize original text
     text = sanitizeQuotesAndDashes(text);
@@ -304,6 +330,22 @@ function startTypingTest(text, time) {
     text = text.replace(/\u00A0/g, ' ');
     // Initialize typing-text-live with character spans for highlighting
     typingTextContainer.innerHTML = '';
+    
+    // Setup event handlers for existing buttons instead of creating them
+    document.getElementById('home-button').addEventListener('click', navigateHome);
+    
+    document.getElementById('reload-button').addEventListener('click', function() {
+        if (!window.hasTestEnded && timerStarted) {
+            if (confirm("Are you sure you want to restart the test? Your current progress will be lost.")) {
+                clearInterval(interval);
+                startTypingTest(window.originalText, time);
+            }
+        } else {
+            clearInterval(interval);
+            startTypingTest(window.originalText, time);
+        }
+        reloadButton.innerHTML = '<i class="fas fa-redo-alt"></i> Restart Test';
+    });
     
     // Wrap each character in a span for individual styling
     for (let i = 0; i < text.length; i++) {
@@ -321,8 +363,36 @@ function startTypingTest(text, time) {
     typingTest.classList.add('active');
     typingInput.innerText = '';
     typingInput.focus();
+    updateTimerDisplay(time);
     
-    timerStarted = false;
+    let startTime;
+    
+    // Add paste event listener to prevent styled text from being pasted
+    typingInput.addEventListener('paste', function(e) {
+        // Prevent the default paste which would include styling
+        e.preventDefault();
+        
+        // Get plain text from clipboard
+        const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+        
+        // Insert the plain text at the current cursor position
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            selection.deleteFromDocument();
+            const textNode = document.createTextNode(pastedText);
+            selection.getRangeAt(0).insertNode(textNode);
+            
+            // Move cursor to the end of inserted text
+            const range = document.createRange();
+            range.setStartAfter(textNode);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+        
+        // Trigger input event to update highlighting
+        typingInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
     
     // Add keydown event to handle backspace properly
     typingInput.addEventListener('keydown', function(e) {
@@ -330,6 +400,11 @@ function startTypingTest(text, time) {
         if (!timerStarted) {
             timerStarted = true;
             startTime = Date.now();
+            // Clear any existing interval just to be safe
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
             interval = setInterval(() => {
                 let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
                 let remainingTime = time - elapsedTime;
@@ -345,7 +420,8 @@ function startTypingTest(text, time) {
 
         if (e.key === 'Backspace') {
             // Get current typed text before backspace takes effect
-            const currentTypedText = typingInput.innerText;
+            let currentTypedText = typingInput.innerText.replace(/\u00A0/g, ' ');
+            currentTypedText = sanitizeQuotesAndDashes(typingInput.innerText);
             
             // After a brief delay to let the backspace take effect
             setTimeout(() => {
@@ -373,7 +449,8 @@ function startTypingTest(text, time) {
     
     // Add input event listener to track typing progress and update highlighting
     typingInput.addEventListener('input', function() {
-        const typedText = typingInput.innerText.replace(/\u00A0/g, ' '); 
+        let typedText = typingInput.innerText.replace(/\u00A0/g, ' ');
+        typedText = sanitizeQuotesAndDashes(typedText);
         // Force empty string if only newlines or whitespace
         if (!typingInput.innerText.trim()) {
             typingInput.innerHTML = '';
@@ -414,13 +491,137 @@ function startTypingTest(text, time) {
 
     typingInput.style.overflowY = 'hidden';
     
-    // End Test button event
+    // Remove any existing event listeners from End Test button
     const endTestBtn = document.getElementById('end-test');
-    endTestBtn.addEventListener('click', function() {
-        if (interval) clearInterval(interval);
+    const newEndTestBtn = endTestBtn.cloneNode(true);
+    endTestBtn.parentNode.replaceChild(newEndTestBtn, endTestBtn);
+    
+    // End Test button event
+    newEndTestBtn.addEventListener('click', function() {
+        // Calculate how much time has elapsed
         let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-        calculateSpeed(typingInput.innerText.length, elapsedTime);
+        let remainingTime = time - elapsedTime;
+        
+        // If there's still time remaining on the clock, confirm submission
+        if (remainingTime > 0 || isNaN(remainingTime)) {
+            showConfirmSubmitModal(function(confirmed) {
+                if (confirmed) {
+                    if (interval) {
+                        clearInterval(interval);
+                        interval = null;
+                    }
+                    // Reset timer display when submitting early
+                    updateTimerDisplay(time);
+                    calculateSpeed(typingInput.innerText.length, elapsedTime);
+                }
+            });
+        } else {
+            // If timer already finished, just submit
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+            calculateSpeed(typingInput.innerText.length, elapsedTime);
+        }
     });
+}
+
+function showConfirmSubmitModal(callback) {
+    const modalOverlay = document.createElement('div');
+    modalOverlay.style.position = 'fixed';
+    modalOverlay.style.top = '0';
+    modalOverlay.style.left = '0';
+    modalOverlay.style.width = '100%';
+    modalOverlay.style.height = '100%';
+    modalOverlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modalOverlay.style.display = 'flex';
+    modalOverlay.style.justifyContent = 'center';
+    modalOverlay.style.alignItems = 'center';
+    modalOverlay.style.zIndex = '1000';
+
+    const modal = document.createElement('div');
+    modal.style.backgroundColor = '#fff';
+    modal.style.padding = '20px';
+    modal.style.borderRadius = '8px';
+    modal.style.maxWidth = '400px';
+    modal.style.textAlign = 'center';
+
+    const heading = document.createElement('h3');
+    heading.textContent = 'Submit Test Early?';
+    heading.style.marginTop = '0';
+    
+    const msgPara = document.createElement('p');
+    msgPara.innerText = "Time hasn't run out yet. Are you sure you want to submit your test now?";
+    
+    const btnContainer = document.createElement('div');
+    btnContainer.style.marginTop = '20px';
+    
+    const submitBtn = document.createElement('button');
+    submitBtn.innerText = 'Yes, Submit Now';
+    submitBtn.style.marginRight = '10px';
+    submitBtn.style.padding = '8px 16px';
+    submitBtn.style.backgroundColor = '#333';
+    submitBtn.style.color = '#fff';
+    submitBtn.style.border = 'none';
+    submitBtn.style.borderRadius = '4px';
+    submitBtn.style.cursor = 'pointer';
+    
+    submitBtn.addEventListener('click', () => {
+        document.body.removeChild(modalOverlay);
+        callback(true);
+    });
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.innerText = 'Cancel';
+    cancelBtn.style.padding = '8px 16px';
+    cancelBtn.style.border = '1px solid #ccc';
+    cancelBtn.style.borderRadius = '4px';
+    cancelBtn.style.cursor = 'pointer';
+    
+    cancelBtn.addEventListener('click', () => {
+        document.body.removeChild(modalOverlay);
+        callback(false);
+    });
+    
+    btnContainer.appendChild(submitBtn);
+    btnContainer.appendChild(cancelBtn);
+    modal.appendChild(heading);
+    modal.appendChild(msgPara);
+    modal.appendChild(btnContainer);
+    modalOverlay.appendChild(modal);
+    document.body.appendChild(modalOverlay);
+}
+
+function showModalAutoDismiss(message) {
+    const modalOverlay = document.createElement('div');
+    modalOverlay.style.position = 'fixed';
+    modalOverlay.style.top = '0';
+    modalOverlay.style.left = '0';
+    modalOverlay.style.width = '100%';
+    modalOverlay.style.height = '100%';
+    modalOverlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modalOverlay.style.display = 'flex';
+    modalOverlay.style.justifyContent = 'center';
+    modalOverlay.style.alignItems = 'center';
+    modalOverlay.style.zIndex = '1000';
+
+    const modal = document.createElement('div');
+    modal.style.backgroundColor = '#fff';
+    modal.style.padding = '20px';
+    modal.style.borderRadius = '8px';
+    modal.style.maxWidth = '80%';
+    modal.style.maxHeight = '80%';
+    modal.style.overflowY = 'auto';
+    modal.innerText = message;
+
+    modalOverlay.appendChild(modal);
+    document.body.appendChild(modalOverlay);
+
+    setTimeout(() => {
+        if (document.body.contains(modalOverlay)) {
+            document.body.removeChild(modalOverlay);
+        }
+    }, 2000);
 }
 
 function updateTimerDisplay(time) {
@@ -430,10 +631,9 @@ function updateTimerDisplay(time) {
 }
 
 function calculateSpeed(charsTyped, elapsedTime) {
-    const h2 = document.createElement('h2');
-    h2.innerText = "Test Results";
-    document.querySelector('.top-section').appendChild(h2);
-    
+    // Set flag that test is completed
+    window.hasTestEnded = true;
+    reloadButton.innerHTML = '<i class="fas fa-redo-alt"></i> Retake Test';    
     // Get the typed text (with non-breaking spaces converted to regular spaces)
     const typedText = typingInput.innerText.replace(/\u00A0/g, ' ');
     const originalText = window.originalText;
@@ -483,6 +683,7 @@ function calculateSpeed(charsTyped, elapsedTime) {
 
     // Build results table with extra metrics rows (unchanged)
     const resultHTML = `
+      <h2 style="text-align:center;">Test Results</h2>
       <table>
           <tr>
               <th>Metric</th>
@@ -532,18 +733,20 @@ function calculateSpeed(charsTyped, elapsedTime) {
     `;
     
     // Display results and hide test elements
-    testResults.innerHTML = resultHTML;
     testResults.style.display = 'block';
+    testResults.innerHTML = resultHTML;
+    
+    // Hide elements instead of removing them
     timerDisplay.style.display = 'none';
     typingInput.style.display = 'none';
     endTest.style.display = 'none';
-
+    
+    // Keep bottom-section but hide it, don't remove it
+    bottomSection.style.display = 'none';
+    endTestContainer.style.display = 'none';
+    
     // Disable further editing of the typing input
     typingInput.setAttribute('contenteditable', 'false');
-
-    // Remove the bottom-section element
-    bottomSection.remove();
-    endTestContainer.remove();
 }
 
 function updateWordCount() {
@@ -561,3 +764,20 @@ modeSelect.addEventListener('change', function() {
     }
 });
 
+// Add this function to index.js
+function navigateHome() {
+    if (!window.hasTestEnded && timerStarted) {
+        if (confirm("Are you sure you want to leave the test? Your current progress will be lost.")) {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+            if (websiteHeading) {
+                websiteHeading.textContent = 'Typing Exam Practice';
+            }
+            window.location.href = 'index.html';
+        }
+    } else {
+        window.location.href = 'index.html';
+    }
+}

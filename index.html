@@ -5,9 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Typing Test</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <h1 onclick="window.location.href='index.html';" style="cursor: pointer;">Typing Exam Practice</h1>
+    <div id="header-container">
+        <button class="home-button" id="home-button"><i class="fas fa-home"></i> Home</button>
+        <h1 id="website-heading">Typing Exam Practice</h1>
+        <div class="header-spacer"></div> <!-- Empty div for flexbox alignment -->
+    </div>
     <div class="container">
         <form id="setup-form">
             <div id="text-options-container">
@@ -80,8 +86,12 @@
             <button type="submit" id="startbtn">Start Test</button>
         </form>
         <div id="typing-test" class="typing-test">
+            <div class="button-container">
+                <div class="button-spacer"></div> <!-- Empty div for spacing -->
+                <button class="reload-button" id="reload-button"><i class="fas fa-redo-alt"></i> Restart Test</button>
+            </div>
+            
             <div class="top-section">
-                <!-- <h1 onclick="window.location.href='index.html';" style="cursor: pointer;">Typing Exam Practice</h1> -->
                 <div class="timer" id="timer-display">Time: 0:00</div>
             </div>
 
