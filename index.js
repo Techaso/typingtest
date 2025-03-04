@@ -440,6 +440,7 @@ function startTypingTest(text, time) {
     
     // Reset test state
     window.hasTestEnded = false;
+    window.lastTestElapsedTime = null; // Reset the stored elapsed time
     
     // Clear any existing interval
     if (interval) {
@@ -447,8 +448,9 @@ function startTypingTest(text, time) {
         interval = null;
     }
     
-    // Reset timerStarted flag
+    // Reset timerStarted flag and clear any existing timer data
     timerStarted = false;
+    excessCharacters = '';
     
     document.getElementById('setup-form').style.display = 'none';
     // Sanitize original text
@@ -485,6 +487,9 @@ function startTypingTest(text, time) {
             if(confirm("Are you sure you want to restart the test?")){
                 clearInterval(interval);
                 interval = null;
+                // Force a complete reset of test state
+                window.hasTestEnded = false;
+                timerStarted = false;
                 startTypingTest(window.originalText, time);
             }
         }
@@ -509,7 +514,8 @@ function startTypingTest(text, time) {
     typingInput.focus();
     updateTimerDisplay(time);
     
-    let startTime;
+    // Always create a fresh startTime that will be assigned on first keypress
+    let startTime = Date.now();
     
     // Update paste event listener to use cleanAndPasteText function for proper handling of formatted text
     typingInput.addEventListener('paste', function(e) {
@@ -523,7 +529,6 @@ function startTypingTest(text, time) {
         // Start timer on first key press
         if (!timerStarted) {
             timerStarted = true;
-            startTime = Date.now();
             // Clear any existing interval just to be safe
             if (interval) {
                 clearInterval(interval);
@@ -535,7 +540,8 @@ function startTypingTest(text, time) {
                 if (remainingTime <= 0) {
                     updateTimerDisplay(0);
                     clearInterval(interval);
-                    calculateSpeed(typingInput.innerText.length, time);
+                    // Pass the actual elapsed time instead of planned time
+                    calculateSpeed(typingInput.innerText.length, elapsedTime);
                 } else {
                     updateTimerDisplay(remainingTime);
                 }
@@ -781,6 +787,10 @@ function calculateSpeed(charsTyped, elapsedTime) {
     const typedText = typingInput.innerText.replace(/\u00A0/g, ' ');
     const originalText = window.originalText;
     
+    // Make sure we have a valid elapsed time (store for potential restart)
+    elapsedTime = Math.max(1, elapsedTime); // Prevent division by zero
+    window.lastTestElapsedTime = elapsedTime; // Store for reference
+    
     // Calculate time in minutes for rate calculations
     const timeInMinutes = elapsedTime / 60;
     
@@ -792,20 +802,40 @@ function calculateSpeed(charsTyped, elapsedTime) {
     const totalTypedLetters = typedText.length;
     const totalOriginalLetters = originalText.length;
     
-    // Count correct and wrong characters
+    // IMPROVED ERROR CALCULATION LOGIC
+    // Count correct characters and errors within the compared range
     let correctLetters = 0;
+    let errorsInComparison = 0;
+    
+    // Calculate errors within overlapping section (min of both texts)
     for (let i = 0; i < Math.min(totalTypedLetters, totalOriginalLetters); i++) {
         if (typedText[i] === originalText[i]) {
             correctLetters++;
+        } else {
+            errorsInComparison++;
         }
     }
-    const wrongLetters = totalTypedLetters - correctLetters;
     
-    // Calculate percentages
-    const correctLettersPercent = totalTypedLetters > 0 ? (correctLetters / totalTypedLetters) * 100 : 0;
-    const wrongLettersPercent = totalTypedLetters > 0 ? (wrongLetters / totalTypedLetters) * 100 : 0;
+    // Extra characters typed beyond original text length are considered errors
+    const extraCharacters = Math.max(0, totalTypedLetters - totalOriginalLetters);
+    
+    // Missing characters (if user typed less than original) are counted as errors
+    const missingCharacters = Math.max(0, totalOriginalLetters - totalTypedLetters);
+    
+    // Total errors = errors in overlapping comparison + extra characters + missing characters
+    const totalErrors = errorsInComparison + extraCharacters;
+    
+    // Calculate more accurate error rates and percentages
+    // Use the total original length as the base for accuracy calculation
+    const accuracy = totalOriginalLetters > 0 ? (correctLetters / totalOriginalLetters) * 100 : 0;
+    
+    // Error rate based on original text length
+    const errorRate = totalOriginalLetters > 0 ? (totalErrors / totalOriginalLetters) * 100 : 0;
+    
+    // Calculate percentages for display
+    const completionPercent = totalOriginalLetters > 0 ? (Math.min(totalTypedLetters, totalOriginalLetters) / totalOriginalLetters) * 100 : 0;
 
-    // Word accuracy metrics
+    // Word accuracy metrics - keeping this part of the original code
     const typedWords = typedText.split(/\s+/);
     const originalWords = originalText.split(/\s+/);
     const totalTypedWords = typedWords.filter(word => word.trim().length > 0).length;
@@ -821,10 +851,10 @@ function calculateSpeed(charsTyped, elapsedTime) {
     const wrongWords = totalTypedWords - correctWords;
     
     // Calculate word percentages
-    const correctWordsPercent = totalTypedWords > 0 ? (correctWords / totalTypedWords) * 100 : 0;
-    const wrongWordsPercent = totalTypedWords > 0 ? (wrongWords / totalTypedWords) * 100 : 0;
+    const correctWordsPercent = totalOriginalWords > 0 ? (correctWords / totalOriginalWords) * 100 : 0;
+    const wrongWordsPercent = totalOriginalWords > 0 ? ((totalTypedWords - correctWords) / totalOriginalWords) * 100 : 0;
 
-    // Build results table with extra metrics rows (unchanged)
+    // Build results table with improved metrics
     const resultHTML = `
       <h2 style="text-align:center;">Test Results</h2>
       <table>
@@ -833,44 +863,52 @@ function calculateSpeed(charsTyped, elapsedTime) {
               <th>Result</th>
           </tr>
           <tr>
-              <td>Keys per Minute</td>
-              <td>${keysPerMinute.toFixed(2)}</td>
+              <td>Words per Minute</td>
+              <td><h4>${wordsPerMinute.toFixed(2)} WPM</h4></td>
           </tr>
           <tr>
-              <td>Words per Minute</td>
-              <td>${wordsPerMinute.toFixed(2)}</td>
+              <td>Keys per Minute</td>
+              <td><h4>${keysPerMinute.toFixed(2)} KPM</h4></td>
+          </tr>
+          <tr>
+              <td>Accuracy</td>
+              <td>${accuracy.toFixed(2)}%</td>
+          </tr>
+          <tr>
+              <td>Error Rate</td>
+              <td>${errorRate.toFixed(2)}%</td>
+          </tr>
+          <tr>
+              <td>Correct Characters (Original Text)</td>
+              <td>${correctLetters} / ${totalOriginalLetters} (${(correctLetters / totalOriginalLetters * 100).toFixed(2)}%)</td>
+          </tr>
+          <tr>
+              <td>Wrong Characters (Original Text)</td>
+              <td>${errorsInComparison} (${Math.min(totalTypedLetters, totalOriginalLetters) > 0 ? (errorsInComparison / Math.min(totalTypedLetters, totalOriginalLetters) * 100).toFixed(2) : '0.00'}%)</td>
+          </tr>
+          <tr>
+              <td>Extra Characters</td>
+              <td>${extraCharacters}</td>
+          </tr>
+          <tr>
+              <td>Missing Characters</td>
+              <td>${missingCharacters} (${(missingCharacters / totalOriginalLetters * 100).toFixed(2)}%)</td>
+          </tr>
+          <tr>
+              <td>Total Errors</td>
+              <td>${totalErrors} (${errorRate.toFixed(2)}%)</td>
+          </tr>
+          <tr>
+              <td>Completion</td>
+              <td>${completionPercent.toFixed(2)}%</td>
           </tr>
           <tr>
               <td>Correct Words</td>
-              <td>${correctWords} / ${totalTypedWords} (${correctWordsPercent.toFixed(2)}%)</td>
+              <td>${correctWords} / ${totalOriginalWords} (${correctWordsPercent.toFixed(2)}%)</td>
           </tr>
           <tr>
               <td>Wrong Words</td>
-              <td>${wrongWords} / ${totalTypedWords} (${wrongWordsPercent.toFixed(2)}%)</td>
-          </tr>
-          <tr>
-              <td>Correct Letters</td>
-              <td>${correctLetters} / ${totalTypedLetters} (${correctLettersPercent.toFixed(2)}%)</td>
-          </tr>
-          <tr>
-              <td>Wrong Letters</td>
-              <td>${wrongLetters} / ${totalTypedLetters} (${wrongLettersPercent.toFixed(2)}%)</td>
-          </tr>
-          <tr>
-              <td>Total Typed Letters</td>
-              <td>${totalTypedLetters}</td>
-          </tr>
-          <tr>
-              <td>Total Typed Words</td>
-              <td>${totalTypedWords}</td>
-          </tr>
-          <tr>
-              <td>Total Original Letters</td>
-              <td>${totalOriginalLetters}</td>
-          </tr>
-          <tr>
-              <td>Total Original Words</td>
-              <td>${totalOriginalWords}</td>
+              <td>${wrongWords} / ${totalOriginalWords} (${wrongWordsPercent.toFixed(2)}%)</td>
           </tr>
       </table>
     `;
