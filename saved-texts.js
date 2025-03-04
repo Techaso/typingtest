@@ -263,6 +263,150 @@ function copyText(index) {
 }
 }
 
+/**
+ * Comprehensive function to clean and paste text into a contenteditable element
+ * Handles: non-English characters removal, converting formatting (superscript/subscript) to normal text,
+ * quote/dash normalization, and proper cursor positioning
+ */
+function cleanAndPasteText(text, targetElement) {
+    if (!text || !targetElement) return;
+    
+    // Step 1: Clean the text
+    let cleanedText = text;
+    
+    // Convert HTML superscript/subscript to normal text instead of removing
+    cleanedText = cleanedText.replace(/<sup>(.*?)<\/sup>/gi, function(match, group) {
+        // Convert superscript numbers to normal numbers
+        return group;
+    });
+    
+    cleanedText = cleanedText.replace(/<sub>(.*?)<\/sub>/gi, function(match, group) {
+        // Convert subscript numbers to normal numbers
+        return group;
+    });
+    
+    // Convert Unicode superscript characters to normal characters
+    const superscriptMap = {
+        // Numbers
+        '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', 
+        '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9',
+        
+        // Operators and symbols
+        '⁺': '+', '⁻': '-', '⁼': '=', '⁽': '(', '⁾': ')',
+        '⁄': '/', '⁎': '*', '˙': '.', '‸': '^', '˚': '°',
+        '∗': '*', '□': '#', '⁀': '~', '´': "'", '˝': '"',
+        '˂': '<', '˃': '>', '˄': '^', '˅': 'v', '˜': '~',
+        '˟': 'x', '‍ᵏ': 'k', '˒': ',', '˓': '!', '˔': '?',
+        '˕': ';', '˖': '+', '˗': '-', '˘': '`', 'ᵉⁿ': 'en',
+        
+        // Lowercase letters
+        'ᵃ': 'a', 'ᵇ': 'b', 'ᶜ': 'c', 'ᵈ': 'd', 'ᵉ': 'e',
+        'ᶠ': 'f', 'ᵍ': 'g', 'ʰ': 'h', 'ⁱ': 'i', 'ʲ': 'j',
+        'ᵏ': 'k', 'ˡ': 'l', 'ᵐ': 'm', 'ⁿ': 'n', 'ᵒ': 'o',
+        'ᵖ': 'p', 'ᵠ': 'q', 'ʳ': 'r', 'ˢ': 's', 'ᵗ': 't', 
+        'ᵘ': 'u', 'ᵛ': 'v', 'ʷ': 'w', 'ˣ': 'x', 'ʸ': 'y', 'ᶻ': 'z',
+        
+        // Uppercase letters
+        'ᴬ': 'A', 'ᴮ': 'B', 'ᶜ': 'C', 'ᴰ': 'D', 'ᴱ': 'E', 'ᶠ': 'F', 'ᴳ': 'G',
+        'ᴴ': 'H', 'ᴵ': 'I', 'ᴶ': 'J', 'ᴷ': 'K', 'ᴸ': 'L', 'ᴹ': 'M', 'ᴺ': 'N', 
+        'ᴼ': 'O', 'ᴾ': 'P', 'ᵠ': 'Q', 'ᴿ': 'R', 'ˢ': 'S', 'ᵀ': 'T', 'ᵁ': 'U', 
+        'ⱽ': 'V', 'ᵂ': 'W', 'ˣ': 'X', 'ʸ': 'Y', 'ᶻ': 'Z'
+    };
+    
+    // Convert Unicode subscript characters to normal characters
+    const subscriptMap = {
+        // Numbers
+        '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4',
+        '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9',
+        
+        // Operators and symbols
+        '₊': '+', '₋': '-', '₌': '=', '₍': '(', '₎': ')',
+        '₣': 'f', '₤': 'L', '₧': 'Pts', '₨': 'Rs', '₩': 'W',
+        '₪': 'NS', '₫': 'd', '€': 'E', '₭': 'K', '₮': 'T',
+        '₯': 'Dr', '₰': 'Pf', '₱': 'P', '₲': 'G', '₳': 'A',
+        '₴': 'UAH', '₵': 'C', '₸': 'T', '₹': 'Rs', '₺': 'TL',
+        '₼': 'man', '₽': 'P', '₾': 'GEL', '₿': 'B',
+        
+        // Lowercase letters
+        'ₐ': 'a', 'ₑ': 'e', 'ₕ': 'h', 'ᵢ': 'i', 'ⱼ': 'j', 
+        'ₖ': 'k', 'ₗ': 'l', 'ₘ': 'm', 'ₙ': 'n', 'ₒ': 'o', 
+        'ₚ': 'p', 'ᵣ': 'r', 'ₛ': 's', 'ₜ': 't', 'ᵤ': 'u', 
+        'ᵥ': 'v', 'ₓ': 'x', 'ᵦ': 'b', 'ᵧ': 'y', 'ᵨ': 'p', 
+        'ᵩ': 'φ', 'ᵪ': 'x', 'ₔ': 'q', 'ₕ': 'h', 'ₖ': 'k',
+        'ₙ': 'n', 'ₚ': 'p', 'ₛ': 's', 'ₜ': 't', 'ₓ': 'x',
+        'ₐ': 'a', 'ₑ': 'e', 'ᵦ': 'β', 'ᵧ': 'γ', 'ᵨ': 'ρ', 'ᵩ': 'φ'
+    };
+    
+    // Preserve ASCII characters and convert Unicode superscript/subscript
+    let result = '';
+    for (let i = 0; i < cleanedText.length; i++) {
+        const char = cleanedText[i];
+        
+        // Check if the character is in the superscript map
+        if (superscriptMap[char]) {
+            result += superscriptMap[char];
+        }
+        // Check if the character is in the subscript map
+        else if (subscriptMap[char]) {
+            result += subscriptMap[char];
+        }
+        // If it's an ASCII character or space, keep it
+        else if (/[\x00-\x7F\s]/.test(char)) {
+            result += char;
+        }
+        // Otherwise, it's a non-ASCII character we want to exclude
+    }
+    
+    // Update cleanedText with our converted result
+    cleanedText = result;
+    
+    // Normalize quotes and dashes
+    cleanedText = sanitizeQuotesAndDashes(cleanedText);
+    
+    // Convert non-breaking spaces to regular spaces
+    cleanedText = cleanedText.replace(/\u00A0/g, ' ');
+    
+    // Step 2: Insert the cleaned text into the target element
+    targetElement.focus();
+    
+    if (targetElement.tagName.toLowerCase() === 'textarea') {
+        // For textarea elements
+        targetElement.value = cleanedText;
+        // Position cursor at the end
+        targetElement.setSelectionRange(cleanedText.length, cleanedText.length);
+    } else {
+        // For contenteditable elements
+        const selection = window.getSelection();
+        
+        if (selection.rangeCount > 0) {
+            // Delete any currently selected text
+            selection.deleteFromDocument();
+            
+            // Insert the cleaned text as a plain text node
+            const textNode = document.createTextNode(cleanedText);
+            selection.getRangeAt(0).insertNode(textNode);
+            
+            // Move cursor to the end of inserted text
+            const range = document.createRange();
+            range.setStartAfter(textNode);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        } else {
+            // If no selection range, just set the content directly
+            targetElement.innerText = cleanedText;
+        }
+    }
+}
+
+function sanitizeQuotesAndDashes(str) {
+    // Convert fancy quotes (single and double) and em dashes to their standard forms
+    return str
+        .replace(/['']/g, "'")
+        .replace(/[""]/g, '"')
+        .replace(/[—–]/g, "--"); // Added en dash to the replacements
+}
+
 // NEW: Add a custom modal for editing saved text
 function openEditModal(currentHeading, currentText, callback) {
     const modalOverlay = document.createElement('div');
@@ -289,19 +433,35 @@ function openEditModal(currentHeading, currentText, callback) {
         <label>Heading:</label><br>
         <input type="text" id="edit-heading" style="width: 100%; font-family: Arial, Helvetica, sans-serif; font-size: 14px;" value="${currentHeading}"><br><br>
         <label>Text:</label><br>
-        <textarea id="edit-text" style="width: 100%; font-family: Arial, Helvetica, sans-serif; font-size: 14px; max-width:600px; min-width:600px; height: 200px; max-height: 400px; min-height:100px;">${currentText}</textarea><br><br>
+        <textarea id="edit-text" style="width: 100%; font-family: Arial, Helvetica, sans-serif; font-size: 14px; max-width:600px; min-width:600px; height: 200px; max-height: 400px; min-height:100px;"></textarea><br><br>
         <button id="edit-save">Save</button>
         <button id="edit-cancel">Cancel</button>
     `;
     modalOverlay.appendChild(modalContent);
     document.body.appendChild(modalOverlay);
 
+    // Get the textarea and apply our comprehensive text cleaning function
+    const editText = document.getElementById('edit-text');
+    cleanAndPasteText(currentText, editText);
+    
+    // Add paste event listener to handle paste events in the edit textarea
+    editText.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const pastedData = (e.clipboardData || window.clipboardData).getData('text');
+        cleanAndPasteText(pastedData, editText);
+    });
+
     document.getElementById('edit-save').addEventListener('click', () => {
         const newHeading = document.getElementById('edit-heading').value;
         const newText = document.getElementById('edit-text').value;
+        
+        // Clean the text once more before saving to ensure consistency
+        const cleanedText = sanitizeQuotesAndDashes(newText).replace(/[^\x00-\x7F\s]/g, '');
+        
         document.body.removeChild(modalOverlay);
-        callback(newHeading, newText);
+        callback(newHeading, cleanedText);
     });
+    
     document.getElementById('edit-cancel').addEventListener('click', () => {
         document.body.removeChild(modalOverlay);
     });
@@ -333,6 +493,105 @@ function deleteText(index) {
 
 function navigateHome() {
     window.location.href = 'index.html';
+}
+
+// Add restrictToEnglishOnly function from index.js
+function restrictToEnglishOnly(element) {
+    if (!element) return;
+    
+    // Add input event listener to filter non-English characters
+    element.addEventListener('input', function() {
+        // Get the current content and selection position
+        const content = this.innerText || this.value;
+        const selectionStart = this.selectionStart || 0;
+        
+        // Replace non-English characters (non-ASCII) with empty string
+        const filteredContent = content.replace(/[^\x00-\x7F\s]/g, '');
+        
+        // Only update if content changed
+        if (content !== filteredContent) {
+            // For textarea elements
+            if (this.tagName.toLowerCase() === 'textarea') {
+                const originalScrollTop = this.scrollTop;
+                this.value = filteredContent;
+                // For textareas we need to restore scroll position and cursor
+                this.scrollTop = originalScrollTop;
+                this.setSelectionRange(selectionStart, selectionStart);
+            }
+            // For contenteditable elements
+            else {
+                const selection = window.getSelection();
+                const range = selection.getRangeAt(0);
+                const cursorPosition = range.startOffset;
+                
+                this.innerText = filteredContent;
+                
+                // Try to restore cursor position
+                try {
+                    const newRange = document.createRange();
+                    const textNode = this.firstChild || this;
+                    
+                    // Calculate the new cursor position
+                    const newPosition = Math.min(cursorPosition, filteredContent.length);
+                    
+                    if (textNode.nodeType === Node.TEXT_NODE) {
+                        newRange.setStart(textNode, newPosition);
+                    } else {
+                        // If there's no text node, place cursor at the end
+                        const lastChild = this.lastChild || this;
+                        newRange.selectNodeContents(lastChild);
+                        newRange.collapse(false);
+                    }
+                    
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                } catch (e) {
+                    console.warn('Failed to restore cursor position');
+                }
+            }
+        }
+    });
+    
+    // Also filter on paste events
+    element.addEventListener('paste', function(e) {
+        // For textarea elements
+        if (this.tagName.toLowerCase() === 'textarea') {
+            // Use setTimeout to let the paste complete first
+            setTimeout(() => {
+                const content = this.value;
+                const filteredContent = content.replace(/[^\x00-\x7F\s]/g, '');
+                if (content !== filteredContent) {
+                    this.value = filteredContent;
+                }
+                // Position cursor at the end
+                this.setSelectionRange(this.value.length, this.value.length);
+            }, 0);
+        }
+        // For contenteditable elements
+        else {
+            // Use setTimeout to let the paste complete first
+            setTimeout(() => {
+                const content = this.innerText;
+                const filteredContent = content.replace(/[^\x00-\x7F\s]/g, '');
+                if (content !== filteredContent) {
+                    this.innerText = filteredContent;
+                }
+                
+                // Position cursor at the end
+                const selection = window.getSelection();
+                const range = document.createRange();
+                if (this.lastChild) {
+                    range.selectNodeContents(this.lastChild);
+                    range.collapse(false);
+                } else {
+                    range.selectNodeContents(this);
+                    range.collapse(false);
+                }
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }, 0);
+        }
+    });
 }
 
 // Initialize when DOM is loaded

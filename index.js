@@ -54,7 +54,7 @@ customTextRadio.addEventListener('change', () => {
     }
 });
   
-  // Toggle custom word count input
+// Toggle custom word count input
 randomWordCountSelect.addEventListener('change', () => {
     if (randomWordCountSelect.value === 'custom') {
       customWordCountInput.style.display = 'inline-block';
@@ -75,33 +75,157 @@ document.getElementById('file-input').addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
         const reader = new FileReader();
         reader.onload = (event) => {
-            // Changed from .value to .innerText for a contenteditable div
-            document.getElementById('custom-text').innerText = sanitizeQuotesAndDashes(event.target.result);
-            updateWordCount();
+            // Process file content through our comprehensive text cleaning function
+            cleanAndPasteText(event.target.result, customText);
             e.target.value = ""; // clear file input to avoid conflicts
-            document.getElementById('custom-text').dispatchEvent(new Event('input', { bubbles: true }));
         };
         reader.readAsText(e.target.files[0]);
     }
 });
 
-// Update the paste event handler for #custom-text:
-document.getElementById('custom-text').addEventListener('paste', function(e) {
+/**
+ * Comprehensive function to clean and paste text into a contenteditable element
+ * Handles: non-English characters removal, converting formatting (superscript/subscript) to normal text,
+ * quote/dash normalization, and proper cursor positioning
+ */
+function cleanAndPasteText(text, targetElement) {
+    if (!text || !targetElement) return;
+    
+    // Step 1: Clean the text
+    let cleanedText = text;
+    
+    // Convert HTML superscript/subscript to normal text instead of removing
+    cleanedText = cleanedText.replace(/<sup>(.*?)<\/sup>/gi, function(match, group) {
+        // Convert superscript numbers to normal numbers
+        return group;
+    });
+    
+    cleanedText = cleanedText.replace(/<sub>(.*?)<\/sub>/gi, function(match, group) {
+        // Convert subscript numbers to normal numbers
+        return group;
+    });
+    
+    // Convert Unicode superscript characters to normal characters
+    const superscriptMap = {
+        // Numbers
+        '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', 
+        '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9',
+        
+        // Operators and symbols
+        '⁺': '+', '⁻': '-', '⁼': '=', '⁽': '(', '⁾': ')',
+        '⁄': '/', '⁎': '*', '˙': '.', '‸': '^', '˚': '°',
+        '∗': '*', '□': '#', '⁀': '~', '´': "'", '˝': '"',
+        '˂': '<', '˃': '>', '˄': '^', '˅': 'v', '˜': '~',
+        '˟': 'x', '‍ᵏ': 'k', '˒': ',', '˓': '!', '˔': '?',
+        '˕': ';', '˖': '+', '˗': '-', '˘': '`', 'ᵉⁿ': 'en',
+        
+        // Lowercase letters
+        'ᵃ': 'a', 'ᵇ': 'b', 'ᶜ': 'c', 'ᵈ': 'd', 'ᵉ': 'e',
+        'ᶠ': 'f', 'ᵍ': 'g', 'ʰ': 'h', 'ⁱ': 'i', 'ʲ': 'j',
+        'ᵏ': 'k', 'ˡ': 'l', 'ᵐ': 'm', 'ⁿ': 'n', 'ᵒ': 'o',
+        'ᵖ': 'p', 'ᵠ': 'q', 'ʳ': 'r', 'ˢ': 's', 'ᵗ': 't', 
+        'ᵘ': 'u', 'ᵛ': 'v', 'ʷ': 'w', 'ˣ': 'x', 'ʸ': 'y', 'ᶻ': 'z',
+        
+        // Uppercase letters
+        'ᴬ': 'A', 'ᴮ': 'B', 'ᶜ': 'C', 'ᴰ': 'D', 'ᴱ': 'E', 'ᶠ': 'F', 'ᴳ': 'G',
+        'ᴴ': 'H', 'ᴵ': 'I', 'ᴶ': 'J', 'ᴷ': 'K', 'ᴸ': 'L', 'ᴹ': 'M', 'ᴺ': 'N', 
+        'ᴼ': 'O', 'ᴾ': 'P', 'ᵠ': 'Q', 'ᴿ': 'R', 'ˢ': 'S', 'ᵀ': 'T', 'ᵁ': 'U', 
+        'ⱽ': 'V', 'ᵂ': 'W', 'ˣ': 'X', 'ʸ': 'Y', 'ᶻ': 'Z'
+    };
+    
+    // Convert Unicode subscript characters to normal characters
+    const subscriptMap = {
+        // Numbers
+        '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4',
+        '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9',
+        
+        // Operators and symbols
+        '₊': '+', '₋': '-', '₌': '=', '₍': '(', '₎': ')',
+        '₣': 'f', '₤': 'L', '₧': 'Pts', '₨': 'Rs', '₩': 'W',
+        '₪': 'NS', '₫': 'd', '€': 'E', '₭': 'K', '₮': 'T',
+        '₯': 'Dr', '₰': 'Pf', '₱': 'P', '₲': 'G', '₳': 'A',
+        '₴': 'UAH', '₵': 'C', '₸': 'T', '₹': 'Rs', '₺': 'TL',
+        '₼': 'man', '₽': 'P', '₾': 'GEL', '₿': 'B',
+        
+        // Lowercase letters
+        'ₐ': 'a', 'ₑ': 'e', 'ₕ': 'h', 'ᵢ': 'i', 'ⱼ': 'j', 
+        'ₖ': 'k', 'ₗ': 'l', 'ₘ': 'm', 'ₙ': 'n', 'ₒ': 'o', 
+        'ₚ': 'p', 'ᵣ': 'r', 'ₛ': 's', 'ₜ': 't', 'ᵤ': 'u', 
+        'ᵥ': 'v', 'ₓ': 'x', 'ᵦ': 'b', 'ᵧ': 'y', 'ᵨ': 'p', 
+        'ᵩ': 'φ', 'ᵪ': 'x', 'ₔ': 'q', 'ₕ': 'h', 'ₖ': 'k',
+        'ₙ': 'n', 'ₚ': 'p', 'ₛ': 's', 'ₜ': 't', 'ₓ': 'x',
+        'ₐ': 'a', 'ₑ': 'e', 'ᵦ': 'β', 'ᵧ': 'γ', 'ᵨ': 'ρ', 'ᵩ': 'φ'
+    };
+    
+    // Preserve ASCII characters and convert Unicode superscript/subscript
+    let result = '';
+    for (let i = 0; i < cleanedText.length; i++) {
+        const char = cleanedText[i];
+        
+        // Check if the character is in the superscript map
+        if (superscriptMap[char]) {
+            result += superscriptMap[char];
+        }
+        // Check if the character is in the subscript map
+        else if (subscriptMap[char]) {
+            result += subscriptMap[char];
+        }
+        // If it's an ASCII character or space, keep it
+        else if (/[\x00-\x7F\s]/.test(char)) {
+            result += char;
+        }
+        // Otherwise, it's a non-ASCII character we want to exclude
+    }
+    
+    // Update cleanedText with our converted result
+    cleanedText = result;
+    
+    // Normalize quotes and dashes
+    cleanedText = sanitizeQuotesAndDashes(cleanedText);
+    
+    // Convert non-breaking spaces to regular spaces
+    cleanedText = cleanedText.replace(/\u00A0/g, ' ');
+    
+    // Step 2: Insert the cleaned text into the target element
+    targetElement.focus();
+    const selection = window.getSelection();
+    
+    if (selection.rangeCount > 0) {
+        // Delete any currently selected text
+        selection.deleteFromDocument();
+        
+        // Insert the cleaned text as a plain text node
+        const textNode = document.createTextNode(cleanedText);
+        selection.getRangeAt(0).insertNode(textNode);
+        
+        // Move cursor to the end of inserted text
+        const range = document.createRange();
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    } else {
+        // If no selection range, just set the content directly
+        targetElement.innerText = cleanedText;
+    }
+    
+    // Step 3: Update UI and trigger events
+    if (targetElement.id === 'custom-text') {
+        updateWordCount();
+    }
+    
+    // Trigger input event after paste so that UI updates appropriately
+    targetElement.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+// Update the paste event handler for #custom-text to use the new function:
+customText.addEventListener('paste', function(e) {
     e.preventDefault();
     let pastedData = (e.clipboardData || window.clipboardData).getData('text');
-    pastedData = sanitizeQuotesAndDashes(pastedData);
-    const customText = document.getElementById('custom-text');
-    customText.focus();
-    const selection = window.getSelection();
-    if (selection.rangeCount > 0) {
-        selection.deleteFromDocument();
-        selection.getRangeAt(0).insertNode(document.createTextNode(pastedData));
-    }
-    // Trigger input event after paste so that Save Text button is updated
-    customText.dispatchEvent(new Event('input', { bubbles: true }));
+    cleanAndPasteText(pastedData, customText);
 });
 
-document.getElementById('custom-text').addEventListener('input', function() {
+customText.addEventListener('input', function() {
     if (this.innerText.trim()) {
         this.classList.remove('input-error');
     }
@@ -111,9 +235,9 @@ document.getElementById('custom-text').addEventListener('input', function() {
 function sanitizeQuotesAndDashes(str) {
     // Convert fancy quotes (single and double) and em dashes to their standard forms
     return str
-        .replace(/[‘’]/g, "'")
-        .replace(/[“”]/g, '"')
-        .replace(/—/g, "--");
+        .replace(/['']/g, "'")
+        .replace(/[""]/g, '"')
+        .replace(/[—–]/g, "--"); // Added en dash to the replacements
 }
 
 timerSelect.addEventListener('change', () => {
@@ -143,15 +267,14 @@ document.getElementById('setup-form').addEventListener('submit', function(event)
     //   styleTypedText(randomText);
     } else {
       // ...existing custom text check...
-      const customTextEl = document.getElementById('custom-text');
-      const customText = customTextEl.innerText.trim();
-      if (!customText) {
-        customTextEl.classList.add('input-error');
+      const x = customText.innerText.trim();
+      if (!x) {
+        customText.classList.add('input-error');
         return;
       } else {
-        customTextEl.classList.remove('input-error');
+        customText.classList.remove('input-error');
       }
-      startTypingTest(customText, resolveSelectedTime());
+      startTypingTest(x, resolveSelectedTime());
     //   styleTypedText(customText);
     }
 });
@@ -287,7 +410,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Dispatch change event to update UI accordingly
         document.getElementById('custom-text-radio').dispatchEvent(new Event('change', { bubbles: true }));
         // Paste the saved text into the custom-text field
-        document.getElementById('custom-text').innerText = useTextValue;
+        customText.innerText = useTextValue;
+        // Update the word count
+        updateWordCount();
+        // Also show the save button since there's text
+        saveTextBtn.style.display = 'inline-block';
         // Remove the temporary key
         localStorage.removeItem("useSavedText");
     }
@@ -368,31 +495,11 @@ function startTypingTest(text, time) {
     
     let startTime;
     
-    // Add paste event listener to prevent styled text from being pasted
+    // Update paste event listener to use cleanAndPasteText function for proper handling of formatted text
     typingInput.addEventListener('paste', function(e) {
-        // Prevent the default paste which would include styling
         e.preventDefault();
-        
-        // Get plain text from clipboard
         const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-        
-        // Insert the plain text at the current cursor position
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-            selection.deleteFromDocument();
-            const textNode = document.createTextNode(pastedText);
-            selection.getRangeAt(0).insertNode(textNode);
-            
-            // Move cursor to the end of inserted text
-            const range = document.createRange();
-            range.setStartAfter(textNode);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-        }
-        
-        // Trigger input event to update highlighting
-        typingInput.dispatchEvent(new Event('input', { bubbles: true }));
+        cleanAndPasteText(pastedText, typingInput);
     });
     
     // Add keydown event to handle backspace properly
