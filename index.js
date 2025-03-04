@@ -459,20 +459,36 @@ function startTypingTest(text, time) {
     // Initialize typing-text-live with character spans for highlighting
     typingTextContainer.innerHTML = '';
     
-    // Setup event handlers for existing buttons instead of creating them
-    document.getElementById('home-button').addEventListener('click', navigateHome);
+    // FIXED: Clone and replace the home button to remove existing event listeners
+    const homeBtn = document.getElementById('home-button');
+    const newHomeBtn = homeBtn.cloneNode(true);
+    newHomeBtn.removeAttribute('onclick'); // Remove the onclick attribute to prevent double triggering
+    homeBtn.parentNode.replaceChild(newHomeBtn, homeBtn);
     
-    document.getElementById('reload-button').addEventListener('click', function() {
+    // Add new event listener to the fresh home button
+    newHomeBtn.addEventListener('click', navigateHome);
+    
+    // Remove previous event listener by cloning and replacing the button
+    const reloadBtn = document.getElementById('reload-button');
+    const newReloadBtn = reloadBtn.cloneNode(true);
+    reloadBtn.parentNode.replaceChild(newReloadBtn, reloadBtn);
+    
+    // Add new event listener to the fresh button element
+    newReloadBtn.addEventListener('click', function() {
         if (!window.hasTestEnded && timerStarted) {
             if (confirm("Are you sure you want to restart the test? Your current progress will be lost.")) {
                 clearInterval(interval);
+                interval = null;
                 startTypingTest(window.originalText, time);
             }
         } else {
-            clearInterval(interval);
-            startTypingTest(window.originalText, time);
+            if(confirm("Are you sure you want to restart the test?")){
+                clearInterval(interval);
+                interval = null;
+                startTypingTest(window.originalText, time);
+            }
         }
-        reloadButton.innerHTML = '<i class="fas fa-redo-alt"></i> Restart Test';
+        newReloadBtn.innerHTML = '<i class="fas fa-redo-alt"></i> Restart Test';
     });
     
     // Wrap each character in a span for individual styling
