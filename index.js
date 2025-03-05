@@ -6,12 +6,12 @@ const customTimerInput = document.getElementById('custom-timer');
 const customText = document.getElementById('custom-text');
 const saveTextBtn = document.getElementById('save-text-btn');
 const viewSavedBtn = document.getElementById('view-saved-btn');
-const randomTextRadio = document.getElementById('random-text-radio');
+const predefinedTextRadio = document.getElementById('predefined-text-radio');
 const customTextRadio = document.getElementById('custom-text-radio');
-const randomTextGroup = document.getElementById('random-text-group');
+const wordLimitGroup = document.getElementById('word-limit-group');
 const uploadContainer = document.getElementById('upload-container');
-const randomWordCountSelect = document.getElementById('randomWordCount');
-const customWordCountInput = document.getElementById('customWordCount');
+const wordLimitSelect = document.getElementById('wordLimit');
+const customWordLimitInput = document.getElementById('customWordLimit');
 const typingTest = document.getElementById('typing-test');
 const typingTextContainer = document.getElementById('typing-text-live');
 const typingInput = document.getElementById('typing-input');
@@ -29,22 +29,25 @@ let timerStarted = false;
 let excessCharacters = '';
 
 // Show/hide sections based on initial selection
-if (randomTextRadio.checked) {
-    randomTextGroup.style.display = 'flex';  // Changed from 'block' to 'flex'
+if (predefinedTextRadio.checked) {
+    wordLimitGroup.style.display = 'flex';  // Changed from 'block' to 'flex'
     uploadContainer.style.display = 'none';
-  }
-randomTextRadio.addEventListener('change', () => {
-    randomTextGroup.style.display = 'flex';  // Changed from 'block' to 'flex'
+}
+predefinedTextRadio.addEventListener('change', () => {
+    wordLimitGroup.style.display = 'flex';  // Changed from 'block' to 'flex'
     uploadContainer.style.display = 'none';
-    customWordCountInput.disabled = false;
+    customWordLimitInput.disabled = false;
 });
 
 customTextRadio.addEventListener('change', () => {
-    randomWordCountSelect.value = "100";
-    customWordCountInput.value = ""; 
-    customWordCountInput.disabled = true;
-    randomTextGroup.style.display = 'none';
+    wordLimitSelect.value = "100";
+    customWordLimitInput.value = ""; 
+    customWordLimitInput.disabled = true;
+    // Keep word limit group visible for custom text too
+    wordLimitGroup.style.display = 'flex';
     uploadContainer.style.display = 'block';
+    // Update word count against limit
+    updateWordCount();
     // NEW: Check if saved texts exist and toggle the View Saved Texts button
     let saved = JSON.parse(localStorage.getItem('savedTexts') || '[]');
     if (saved.length > 0) {
@@ -55,15 +58,15 @@ customTextRadio.addEventListener('change', () => {
 });
   
 // Toggle custom word count input
-randomWordCountSelect.addEventListener('change', () => {
-    if (randomWordCountSelect.value === 'custom') {
-      customWordCountInput.style.display = 'inline-block';
-      customWordCountInput.required = true;
-      customWordCountInput.disabled = false;
+wordLimitSelect.addEventListener('change', () => {
+    if (wordLimitSelect.value === 'custom') {
+      customWordLimitInput.style.display = 'inline-block';
+      customWordLimitInput.required = true;
+      customWordLimitInput.disabled = false;
     } else {
-      customWordCountInput.style.display = 'none';
-      customWordCountInput.required = false;
-      customWordCountInput.disabled = true;
+      customWordLimitInput.style.display = 'none';
+      customWordLimitInput.required = false;
+      customWordLimitInput.disabled = true;
     }
 });
 
@@ -252,49 +255,78 @@ timerSelect.addEventListener('change', () => {
 
 
 
-document.getElementById('setup-form').addEventListener('submit', function(event) {
+document.getElementById('setup-form').addEventListener('submit', async function(event) {
     event.preventDefault();
 
+    // Get the selected word limit
+    let wordLimit = parseInt(wordLimitSelect.value);
+    if (wordLimitSelect.value === 'custom') {
+        wordLimit = parseInt(customWordLimitInput.value) || 50;
+    }
+
     // Check which radio is selected
-    if (randomTextRadio.checked) {
-      let count = parseInt(randomWordCountSelect.value);
-      if (randomWordCountSelect.value === 'custom') {
-        count = parseInt(customWordCountInput.value) || 50;
-      }
-      // Generate random text
-      const randomText = getRandomWords(count);
-      startTypingTest(randomText, resolveSelectedTime());
-    //   styleTypedText(randomText);
+    if (predefinedTextRadio.checked) {
+        // Generate random text
+        const predefinedText = await getPredefinedWords(wordLimit);
+        startTypingTest(predefinedText, resolveSelectedTime());
     } else {
-      // ...existing custom text check...
-      const x = customText.innerText.trim();
-      if (!x) {
-        customText.classList.add('input-error');
-        return;
-      } else {
-        customText.classList.remove('input-error');
-      }
-      startTypingTest(x, resolveSelectedTime());
-    //   styleTypedText(customText);
+        // Handle custom text
+        const customTextContent = customText.innerText.trim();
+        if (!customTextContent) {
+            customText.classList.add('input-error');
+            return;
+        } else {
+            customText.classList.remove('input-error');
+        }
+
+        // Truncate custom text to word limit
+        const truncatedText = truncateTextToWordLimit(customTextContent, wordLimit);
+        startTypingTest(truncatedText, resolveSelectedTime());
     }
 });
 
-// Generate random words
-function getRandomWords(count) {
-  const words = [
-    'lorem','Ipsum','dolor','sit','amet','consectetur','adipiscing','elit',
-    'sed','do','eiusmod','tempor','incididunt','labore','et','dolore',
-    'magna','aliqua','ut','enim','ad','minim','veniam','quis','nostrud',
-    'exercitation','ullamco','laboris','nisi','aliquip','ex','commodo'
-    // ... some more if you like ...
-  ];
-  let result = [];
-  // Generate requested number of random words
-  for (let i = 0; i < count; i++) {
-    result.push(words[Math.floor(Math.random() * words.length)]);
-  }
-  return result.join(' ');
+// Function to truncate text to a specified word limit
+function truncateTextToWordLimit(text, limit) {
+    const words = text.split(/\s+/);
+    if (words.length <= limit) {
+        return text; // No truncation needed
+    }
+    
+    // Take only the specified number of words
+    return words.slice(0, limit).join(' ');
 }
+
+// Generate random words
+async function generateText(count) {
+    try {
+      document.getElementById('startbtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+      document.getElementById('startbtn').disabled = true;
+      const response = await fetch(`http://localhost:3000/api/random-text?count=${count}`);
+      const data = await response.json();
+      if (!response.ok) {
+        return getPredefinedWords(count);
+      }
+      return data.text;
+    } catch (error) {
+      console.error('Error fetching random text:', error);
+      return getPredefinedWords(count);
+    } finally {
+      document.getElementById('startbtn').innerHTML = 'Start Test';
+      document.getElementById('startbtn').disabled = false;
+    }
+  }
+  
+  // Keep original function as fallback
+  async function getPredefinedWords(count) {
+    const response = await fetch('predefined.txt');
+    const text = await response.text();
+    const words = text.split(/\s+/);
+    let result = [];
+    for (let i = 0; i < count; i++) {
+        result.push(words[Math.floor(Math.random() * words.length)]);
+    }
+    return result.join(' ');
+  }
 
 // Show Save Text button if custom-text has non-empty text
 customText.addEventListener('input', function() {
@@ -382,11 +414,15 @@ saveTextBtn.addEventListener('click', function() {
 
 // Update customTextRadio event listener:
 customTextRadio.addEventListener('change', () => {
-    randomWordCountSelect.value = "100";
-    customWordCountInput.value = "";
-    customWordCountInput.disabled = true;
-    randomTextGroup.style.display = 'none';
+    wordLimitSelect.value = "100";
+    customWordLimitInput.value = "";
+    customWordLimitInput.disabled = true;
+    wordLimitGroup.style.display = 'flex';
     uploadContainer.style.display = 'block';
+    
+    // Update word count to show against limit
+    updateWordCount();
+    
     // NEW: Check if saved texts exist and toggle the View Saved Texts button
     let saved = JSON.parse(localStorage.getItem('savedTexts') || '[]');
     if (saved.length > 0) {
@@ -692,13 +728,13 @@ function showConfirmSubmitModal(callback) {
     heading.style.marginTop = '0';
     
     const msgPara = document.createElement('p');
-    msgPara.innerText = "Time hasn't run out yet. Are you sure you want to submit your test now?";
+    msgPara.innerText = "Time hasn't run out yet. Are you sure you want to submit?";
     
     const btnContainer = document.createElement('div');
     btnContainer.style.marginTop = '20px';
     
     const submitBtn = document.createElement('button');
-    submitBtn.innerText = 'Yes, Submit Now';
+    submitBtn.innerText = 'Yes';
     submitBtn.style.marginRight = '10px';
     submitBtn.style.padding = '8px 16px';
     submitBtn.style.backgroundColor = '#333';
@@ -713,7 +749,7 @@ function showConfirmSubmitModal(callback) {
     });
     
     const cancelBtn = document.createElement('button');
-    cancelBtn.innerText = 'Cancel';
+    cancelBtn.innerText = 'No';
     cancelBtn.style.padding = '8px 16px';
     cancelBtn.style.border = '1px solid #ccc';
     cancelBtn.style.borderRadius = '4px';
@@ -931,9 +967,21 @@ function calculateSpeed(charsTyped, elapsedTime) {
 }
 
 function updateWordCount() {
-  const text = customText.innerText.trim();   // End New Code
+  const text = customText.innerText.trim();
   const words = text === '' ? 0 : text.split(/\s+/).length;
-  document.getElementById('word-count').innerText = `Word Count: ${words}`;
+  const limit = parseInt(wordLimitSelect.value) || 100;
+  
+  // Show word count against limit for custom text
+  if (customTextRadio.checked) {
+    document.getElementById('word-count').innerHTML = `Word Count: <span style="${words > limit ? 'color:red;' : ''}">${words} / ${limit}</span>`;
+    
+    // Warn if over limit
+    if (words > limit) {
+      document.getElementById('word-count').innerHTML += `<span style="color:red; font-size:0.8em;">  (So, text will be truncated to ${limit} words.)</span>`;
+    }
+  } else {
+    document.getElementById('word-count').innerText = `Word Count: ${words}`;
+  }
 }
 
 // NEW: Apply blur if Blind Test mode is selected
@@ -962,3 +1010,8 @@ function navigateHome() {
         window.location.href = 'index.html';
     }
 }
+
+// Add word limit change listener
+wordLimitSelect.addEventListener('change', updateWordCount);
+customWordLimitInput.addEventListener('input', updateWordCount);
+customText.addEventListener('input', updateWordCount);
