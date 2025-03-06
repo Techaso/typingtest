@@ -190,7 +190,7 @@ form {
     background-color: #f5f5f5;
 }
 
-#timer-div, #mode-div, #word-limit-group, #radio-group {
+#ai-container, #timer-div, #mode-div, #word-limit-group, #radio-group {
     width: 100%;
     margin: auto;
     margin-top: 5px;
@@ -199,8 +199,11 @@ form {
     align-items: center;
 }
 
-#timer, #mode-select, #wordLimit,#radio-group {
+#generation-options, #timer, #mode-select, #wordLimit,#radio-group {
     width: 50%;
+}
+#ai-container {
+    margin-top: 15px;
 }
 
 
@@ -265,4 +268,30 @@ form {
 
 #word-count span {
     font-weight: bold;
+}
+
+#user-prompt {
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+#generate-btn {
+    margin-top: 10px;
+    background-color: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+#generate-btn:hover {
+    background-color: #555;
+}
+
+#generate-btn:disabled {
+    background-color: #999;
+    cursor: not-allowed;
 }

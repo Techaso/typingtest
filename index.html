@@ -34,11 +34,12 @@
             <div id="word-limit-group">
                 <label for="wordLimit">Select Words Limit:</label>
                 <select id="wordLimit" name="wordLimit" required>
-                    <option value="50" selected>50 words</option>
-                    <option value="100">100 words</option>
+                    <option value="50">50 words</option>
+                    <option value="100" selected>100 words</option>
                     <option value="200">200 words</option>
                     <option value="500">500 words</option>
                     <option value="custom">Custom</option>
+                    <option value="15000" id="no-limit-option" style="display: none;">No limit</option>
                 </select>
                 <input type="number" id="customWordLimit" name="customWordLimit" placeholder="Enter limit" style="display: none;">
             </div>
@@ -50,7 +51,7 @@
                     <div id="word-count" class="word-count"></div>
                     <div class="upload-inline">
                         <span>or</span>
-                        <button type="button" id="upload-btn">Upload New Text</button>
+                        <button type="button" id="upload-btn">Upload Text File</button>
                         <!-- NEW: Save Text button -->
                         <button type="button" id="save-text-btn" style="display:none;">Save Text</button>
                         <!-- NEW: View Saved Texts button -->
@@ -59,7 +60,24 @@
                     <input type="file" id="file-input" accept=".txt" style="display: none;">
                 </div>
             </div>
-            
+            <!-- Fix the AI container structure -->
+            <div id="ai-container" style="display: none;">
+                <div class="ai-select-container" style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                    <label for="generation-options">Generate using AI <img src="images/ai.png" alt="AI Icon" style="width: 20px; height: 20px; vertical-align: middle;"></label>
+                    <select id="generation-options" name="generation-options" required style="width: 50%;">
+                        <option value="custom">Custom</option>
+                        <option value="no" selected>Not right now</option>
+                        <option value="gk">General Knowledge</option>
+                        <option value="vocabulary">Vocabulary</option>
+                        <option value="story">Short Story</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end;">
+                    <input type="text" id="user-prompt" name="user-prompt" placeholder="Describe required text. Eg. Shaayri, Interview Questions Answers, etc." style="display: none; margin-right: 10px; width: 100%;" />
+                    <button type="button" id="generate-btn">Generate</button>
+                </div>
+            </div>
+
             <div id="timer-div">
                 <label for="timer">Select Time Limit:</label>
                 <select id="timer" name="timer" required>
@@ -79,7 +97,7 @@
                 <select id="mode-select" name="mode-select" required>
                     <option value="practice" selected>Practice Mode</option>
                     <option value="exam">Exam Mode</option>
-                    <option value="blind">Blind Test</option> <!-- NEW option added -->
+                    <option value="blind">Blur Mode</option> <!-- NEW option added -->
                 </select>
             </div>
             <br>

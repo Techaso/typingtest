@@ -22,6 +22,8 @@ const bottomSection = document.querySelector('.bottom-section');
 const endTestContainer = document.querySelector('.end-test-container');
 const websiteHeading = document.getElementById('website-heading');
 const reloadButton = document.getElementById('reload-button');
+const generateTextButton = document.getElementById('generate-btn');
+const aiContainer = document.getElementById('ai-container');
 
 // Add these global variables
 let interval;
@@ -34,18 +36,25 @@ if (predefinedTextRadio.checked) {
     uploadContainer.style.display = 'none';
 }
 predefinedTextRadio.addEventListener('change', () => {
+    const noLimitOption = document.getElementById('no-limit-option');
+    noLimitOption.style.display = 'none';
+    wordLimitSelect.value = "100";
     wordLimitGroup.style.display = 'flex';  // Changed from 'block' to 'flex'
     uploadContainer.style.display = 'none';
     customWordLimitInput.disabled = false;
+    aiContainer.style.display = 'none';
 });
 
 customTextRadio.addEventListener('change', () => {
-    wordLimitSelect.value = "100";
+    const noLimitOption = document.getElementById('no-limit-option');
+    wordLimitSelect.value = noLimitOption.value;
+    noLimitOption.style.display = '';
     customWordLimitInput.value = ""; 
     customWordLimitInput.disabled = true;
     // Keep word limit group visible for custom text too
     wordLimitGroup.style.display = 'flex';
     uploadContainer.style.display = 'block';
+    aiContainer.style.display = 'block';
     // Update word count against limit
     updateWordCount();
     // NEW: Check if saved texts exist and toggle the View Saved Texts button
@@ -297,32 +306,44 @@ function truncateTextToWordLimit(text, limit) {
 }
 
 // Generate random words
-async function generateText(count) {
-    try {
-      document.getElementById('startbtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-      document.getElementById('startbtn').disabled = true;
-      const response = await fetch(`http://localhost:3000/api/random-text?count=${count}`);
-      const data = await response.json();
-      if (!response.ok) {
-        return getPredefinedWords(count);
-      }
-      return data.text;
-    } catch (error) {
-      console.error('Error fetching random text:', error);
-      return getPredefinedWords(count);
-    } finally {
-      document.getElementById('startbtn').innerHTML = 'Start Test';
-      document.getElementById('startbtn').disabled = false;
+async function generateText() {
+    let wordLimit = parseInt(wordLimitSelect.value);
+    if (wordLimitSelect.value === 'custom') {
+        wordLimit = parseInt(customWordLimitInput.value) || 50;
     }
-  }
+    
+    const generationType = generationOptions.value;
+    const userPrompt = userPromptInput.value.trim();
+    
+    try {
+        const apiUrl = new URL('https://goldfish-app-yq66j.ondigitalocean.app/api/generate-text');
+        apiUrl.searchParams.append('wordLimit', wordLimit);
+        apiUrl.searchParams.append('type', generationType);
+        
+        if (generationType === 'custom' && userPrompt) {
+            apiUrl.searchParams.append('prompt', userPrompt);
+        }
+        
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            return getPredefinedWords(wordLimit);
+        }
+        return data.text;
+    } catch (error) {
+        console.error('Error fetching random text:', error);
+        return getPredefinedWords(wordLimit);
+    }
+}
   
   // Keep original function as fallback
-  async function getPredefinedWords(count) {
+  async function getPredefinedWords(wordLimit) {
     const response = await fetch('predefined.txt');
     const text = await response.text();
     const words = text.split(/\s+/);
     let result = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < wordLimit; i++) {
         result.push(words[Math.floor(Math.random() * words.length)]);
     }
     return result.join(' ');
@@ -412,25 +433,6 @@ saveTextBtn.addEventListener('click', function() {
     });
 });
 
-// Update customTextRadio event listener:
-customTextRadio.addEventListener('change', () => {
-    wordLimitSelect.value = "100";
-    customWordLimitInput.value = "";
-    customWordLimitInput.disabled = true;
-    wordLimitGroup.style.display = 'flex';
-    uploadContainer.style.display = 'block';
-    
-    // Update word count to show against limit
-    updateWordCount();
-    
-    // NEW: Check if saved texts exist and toggle the View Saved Texts button
-    let saved = JSON.parse(localStorage.getItem('savedTexts') || '[]');
-    if (saved.length > 0) {
-        viewSavedBtn.style.display = 'inline-block';
-    } else {
-        viewSavedBtn.style.display = 'none';
-    }
-});
 
 // NEW: When View Saved Texts button is clicked, navigate to the saved texts page
 viewSavedBtn.addEventListener('click', () => {
@@ -453,6 +455,23 @@ document.addEventListener('DOMContentLoaded', function() {
         saveTextBtn.style.display = 'inline-block';
         // Remove the temporary key
         localStorage.removeItem("useSavedText");
+    }
+    // Initially hide word count if custom text is empty
+    const wordCountDiv = document.getElementById('word-count');
+    if (!customText.innerText.trim()) {
+        wordCountDiv.style.display = 'none';
+    }
+
+    if (generationOptions.value === 'no') {
+        generateTextButton.style.display = 'none';
+        userPromptInput.style.display = 'none';
+    } else if (generationOptions.value === 'custom') {
+        userPromptInput.style.display = 'inline-block';
+    }
+    if (predefinedTextRadio.checked) {
+        aiContainer.style.display = 'none';
+    } else if (customTextRadio.checked) {
+        aiContainer.style.display = 'block';
     }
 });
 
@@ -908,7 +927,7 @@ function calculateSpeed(charsTyped, elapsedTime) {
           </tr>
           <tr>
               <td>Accuracy</td>
-              <td>${accuracy.toFixed(2)}%</td>
+              <td>${accuracy.toFixed(2)}%</</td>
           </tr>
           <tr>
               <td>Error Rate</td>
@@ -970,17 +989,28 @@ function updateWordCount() {
   const text = customText.innerText.trim();
   const words = text === '' ? 0 : text.split(/\s+/).length;
   const limit = parseInt(wordLimitSelect.value) || 100;
+  const wordCountDiv = document.getElementById('word-count');
+  
+  // Only show word count if there is text
+  if (text === '') {
+    wordCountDiv.style.display = 'none';
+    return;
+  } else {
+    wordCountDiv.style.display = 'block';
+  }
   
   // Show word count against limit for custom text
   if (customTextRadio.checked) {
-    document.getElementById('word-count').innerHTML = `Word Count: <span style="${words > limit ? 'color:red;' : ''}">${words} / ${limit}</span>`;
     
     // Warn if over limit
     if (words > limit) {
-      document.getElementById('word-count').innerHTML += `<span style="color:red; font-size:0.8em;">  (So, text will be truncated to ${limit} words.)</span>`;
+        document.getElementById('word-count').innerHTML = `Word Count: <span style="${words > limit ? 'color:red;' : ''}">${words} > ${limit}</span>`;
+        document.getElementById('word-count').innerHTML += `<span style="color:red; font-size:0.8em;"> (So, text will be truncated to ${limit} words.)</span>`;
+    }else {
+        document.getElementById('word-count').innerHTML = `Word Count: <span style="${words > limit ? 'color:red;' : ''}">${words}</span>`;
     }
   } else {
-    document.getElementById('word-count').innerText = `Word Count: ${words}`;
+    wordCountDiv.innerText = `Word Count: ${words}`;
   }
 }
 
@@ -1015,3 +1045,91 @@ function navigateHome() {
 wordLimitSelect.addEventListener('change', updateWordCount);
 customWordLimitInput.addEventListener('input', updateWordCount);
 customText.addEventListener('input', updateWordCount);
+
+// Add event listener for generate button
+generateTextButton.addEventListener('click', async function() {
+    
+    // Show loading indicator on button
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    this.disabled = true;
+    
+    try {
+        // Call the generateText function to get random text
+        const generatedText = await generateText(wordLimit);
+        
+        // Put the generated text into the custom-text element
+        customText.innerText = generatedText;
+        
+        // Update the word count display and ensure visibility
+        updateWordCount();
+        
+        // Show the save button since we now have text
+        saveTextBtn.style.display = 'inline-block';
+    } catch (error) {
+        console.error('Error generating text:', error);
+        // Optionally show error message to user
+    } finally {
+        // Restore the button text and enable it
+        this.innerHTML = 'Generate';
+        this.disabled = false;
+    }
+});
+
+// Get references to new elements
+const generationOptions = document.getElementById('generation-options');
+const userPromptInput = document.getElementById('user-prompt');
+
+// Add event listener to show/hide generate button based on selection
+generationOptions.addEventListener('change', function() {
+    const label = document.querySelector('label[for="generation-options"]');
+    if (this.value === 'no') {
+        generateTextButton.style.display = 'none';
+        userPromptInput.style.display = 'none';
+        label.style.fontWeight = 'normal';
+    } else if (this.value === 'custom') {
+        if (label) {
+            label.style.fontWeight = 'bold';
+        }
+        generateTextButton.style.display = 'inline-block';
+        userPromptInput.style.display = 'inline-block';
+    } else {
+        generateTextButton.style.display = 'inline-block';
+        userPromptInput.style.display = 'none';
+        label.style.fontWeight = 'normal';
+    }
+});
+
+// Update generate button click handler to ensure custom text radio is selected
+generateTextButton.addEventListener('click', async function() {
+    // Select custom text radio if it's not already selected
+    if (!customTextRadio.checked) {
+        customTextRadio.checked = true;
+        customTextRadio.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    
+    // Show loading indicator on button
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    this.disabled = true;
+    
+    try {
+        // Call the generateText function to get text based on selected type
+        const generatedText = await generateText();
+        
+        // Put the generated text into the custom-text element
+        customText.innerText = generatedText;
+        
+        // Update the word count display and ensure visibility
+        updateWordCount();
+        
+        // Show the save button since we now have text
+        saveTextBtn.style.display = 'inline-block';
+    } catch (error) {
+        console.error('Error generating text:', error);
+        // Optionally show error message to user
+        showModalAutoDismiss("Failed to generate text. Please try again.");
+    } finally {
+        // Restore the button text and enable it
+        this.innerHTML = 'Generate';
+        this.disabled = false;
+    }
+});
