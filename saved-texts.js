@@ -84,6 +84,10 @@ loadSavedTexts();
 function useText(index) {
 const saved = getSavedTexts();
 if (saved[index]) {
+    console.log("Using saved text:", saved[index].text);
+    for (let i = 0; i < saved[index].text.length; i++) {
+        console.log(`Character: ${saved[index].text[i]}, ASCII: ${saved[index].text.charCodeAt(i)}`);
+    }
     // Save the text temporarily in localStorage
     localStorage.setItem("useSavedText", saved[index].text);
     // Navigate to the home page (index.html)

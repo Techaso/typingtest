@@ -111,6 +111,8 @@ form {
     font-size: 1.3em;
     /* line-height: 1.34; */
     resize: none;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 #text-container {
     margin-top: 15px;

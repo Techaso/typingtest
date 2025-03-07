@@ -1,3 +1,4 @@
+const setupForm = document.getElementById('setup-form');
 const styledTypedText = document.getElementById('typed-text');
 const typingTextLive = document.getElementById('typing-text-live');
 const modeSelect = document.getElementById('mode-select');
@@ -9,11 +10,11 @@ const viewSavedBtn = document.getElementById('view-saved-btn');
 const predefinedTextRadio = document.getElementById('predefined-text-radio');
 const customTextRadio = document.getElementById('custom-text-radio');
 const wordLimitGroup = document.getElementById('word-limit-group');
+const wordCountDiv = document.getElementById('word-count');
 const uploadContainer = document.getElementById('upload-container');
 const wordLimitSelect = document.getElementById('wordLimit');
 const customWordLimitInput = document.getElementById('customWordLimit');
 const typingTest = document.getElementById('typing-test');
-const typingTextContainer = document.getElementById('typing-text-live');
 const typingInput = document.getElementById('typing-input');
 const testResults = document.getElementById('test-results');
 const timerDisplay = document.getElementById('timer-display');
@@ -196,7 +197,7 @@ function cleanAndPasteText(text, targetElement) {
     cleanedText = sanitizeQuotesAndDashes(cleanedText);
     
     // Convert non-breaking spaces to regular spaces
-    cleanedText = cleanedText.replace(/\u00A0/g, ' ');
+    // cleanedText = cleanedText.replace(/\u00A0/g, ' ');
     
     // Step 2: Insert the cleaned text into the target element
     targetElement.focus();
@@ -238,7 +239,7 @@ customText.addEventListener('paste', function(e) {
 });
 
 customText.addEventListener('input', function() {
-    if (this.innerText.trim()) {
+    if (this.innerText) {
         this.classList.remove('input-error');
     }
     updateWordCount();
@@ -264,7 +265,7 @@ timerSelect.addEventListener('change', () => {
 
 
 
-document.getElementById('setup-form').addEventListener('submit', async function(event) {
+setupForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
     // Get the selected word limit
@@ -279,9 +280,14 @@ document.getElementById('setup-form').addEventListener('submit', async function(
         const predefinedText = await getPredefinedWords(wordLimit);
         startTypingTest(predefinedText, resolveSelectedTime());
     } else {
-        // Handle custom text
-        const customTextContent = customText.innerText.trim();
-        if (!customTextContent) {
+        // Handle custom text with preserved whitespace
+        const customTextContent = customText.innerText.replace(/\u00A0/g, ' ');
+        // console.log("customTextContent for test:", customTextContent);
+        // for (let i = 0; i < customTextContent.length; i++) {
+        //     console.log(`Character: ${customTextContent[i]}, ASCII: ${customTextContent.charCodeAt(i)}`);
+        // }
+        
+        if (!customTextContent.trim()) {  // Still check if it's empty after trimming
             customText.classList.add('input-error');
             return;
         } else {
@@ -296,13 +302,28 @@ document.getElementById('setup-form').addEventListener('submit', async function(
 
 // Function to truncate text to a specified word limit
 function truncateTextToWordLimit(text, limit) {
-    const words = text.split(/\s+/);
+    // Split by whitespace but keep the whitespace in the result
+    const words = text.match(/\S+/g) || [];
+    // console.log("words:", words);
+    
     if (words.length <= limit) {
         return text; // No truncation needed
     }
     
-    // Take only the specified number of words
-    return words.slice(0, limit).join(' ');
+    // Find the position of the end of the limit-th word
+    let pos = -1;
+    let count = 0;
+    const regex = /\S+/g;
+    let match;
+    
+    while ((match = regex.exec(text)) !== null && count < limit) {
+        count++;
+        if (count === limit) {
+            pos = match.index + match[0].length;
+        }
+    }
+    
+    return pos !== -1 ? text.substring(0, pos) : text;
 }
 
 // Generate random words
@@ -352,7 +373,7 @@ async function generateText() {
 // Show Save Text button if custom-text has non-empty text
 customText.addEventListener('input', function() {
     updateWordCount();
-    if (this.innerText.trim().length > 0) {
+    if (this.innerText.length > 0) {
         saveTextBtn.style.display = 'inline-block';
     } else {
         saveTextBtn.style.display = 'none';
@@ -391,7 +412,7 @@ function openSaveTextModal(callback) {
     document.body.appendChild(modalOverlay);
 
     document.getElementById('save-text-submit').addEventListener('click', () => {
-        const heading = document.getElementById('save-heading').value.trim();
+        const heading = document.getElementById('save-heading').value;
         const errorElement = document.getElementById('heading-error');
         
         // Validate the heading field
@@ -418,15 +439,20 @@ function openSaveTextModal(callback) {
 
 // Replace existing saveTextBtn event listener:
 saveTextBtn.addEventListener('click', function() {
-    const textValue = customText.innerText.trim();
-    if (!textValue) return;
+    const textValue = customText.innerText.replace(/\u00A0/g, ' ');
+    // console.log("Save text value:", textValue);
+    // for (let i = 0; i < textValue.length; i++) {
+    //     console.log(`textValue Character: ${textValue[i]}, ASCII: ${textValue.charCodeAt(i)}`);
+    // }
+    
+    if (!textValue.trim()) return; // Still check if it's empty after trimming
+    
     openSaveTextModal(function(heading) {
         if (!heading) return;
         let saved = JSON.parse(localStorage.getItem('savedTexts') || '[]');
         saved.push({ heading, text: textValue });
         localStorage.setItem('savedTexts', JSON.stringify(saved));
         // Immediately show the View Saved Texts button
-        const viewSavedBtn = document.getElementById('view-saved-btn');
         if (viewSavedBtn) {
             viewSavedBtn.style.display = 'inline-block';
         }
@@ -439,16 +465,43 @@ viewSavedBtn.addEventListener('click', () => {
     window.location.href = 'saved-texts.html';
 });
 
+// PRESERVE LEADING SPACES: Use TextNode approach for exact character preservation
+function preservedText(text) {
+    // Create a div element which preserves whitespace exactly
+    const divElement = document.createElement('div');
+    divElement.style.margin = '0';
+    divElement.style.fontFamily = 'inherit';
+    divElement.style.fontSize = 'inherit';
+    divElement.style.whiteSpace = 'pre-wrap'; // This preserves whitespace
+    divElement.style.wordBreak = 'break-word';
+
+    // Create text node with exact characters
+    const textNode = document.createTextNode(text);
+    divElement.appendChild(textNode);
+    return divElement;
+}
+
 // At the start of your script, add this to check for a saved text to use:
 document.addEventListener('DOMContentLoaded', function() {
     const useTextValue = localStorage.getItem("useSavedText");
+    // console.log("useTextValue: ", useTextValue);
+    // for (let i = 0; i < useTextValue.length; i++) {
+    //     console.log(`Character: ${useTextValue[i]}, ASCII: ${useTextValue.charCodeAt(i)}`);
+    // }
     if (useTextValue) {
         // Select and check the custom-text radio button
-        document.getElementById('custom-text-radio').checked = true;
+        customTextRadio.checked = true;
         // Dispatch change event to update UI accordingly
-        document.getElementById('custom-text-radio').dispatchEvent(new Event('change', { bubbles: true }));
+        customTextRadio.dispatchEvent(new Event('change', { bubbles: true }));
         // Paste the saved text into the custom-text field
-        customText.innerText = useTextValue;
+        
+        customText.innerHTML = ''; // Clear any existing content
+        customText.appendChild(preservedText(useTextValue));
+
+        // console.log("customText.innerText: ", customText.innerText);
+        // for (let i = 0; i < customText.innerText.length; i++) {
+        //     console.log(`Character: ${customText.innerText[i]}, ASCII: ${customText.innerText.charCodeAt(i)}`);
+        // }
         // Update the word count
         updateWordCount();
         // Also show the save button since there's text
@@ -456,9 +509,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Remove the temporary key
         localStorage.removeItem("useSavedText");
     }
-    // Initially hide word count if custom text is empty
-    const wordCountDiv = document.getElementById('word-count');
-    if (!customText.innerText.trim()) {
+    if (!customText.innerText) {
         wordCountDiv.style.display = 'none';
     }
 
@@ -484,13 +535,19 @@ function resolveSelectedTime() {
 }
 
 function startTypingTest(text, time) {
+    // console.log("startTypingTest text:", text);
+    // for (let i = 0; i < text.length; i++) {
+    //     console.log(`Character: ${text[i]}, ASCII: ${text.charCodeAt(i)}`);
+    // }
+    
     // Reset UI from any previous test
     testResults.style.display = 'none';
     bottomSection.style.display = 'flex';
     endTestContainer.style.display = 'block';
     timerDisplay.style.display = 'block';
     typingInput.style.display = 'block';
-    // Reset contenteditable attribute to allow typing
+    setupForm.style.display = 'none';
+    
     typingInput.setAttribute('contenteditable', 'true');
     
     // Reset test state
@@ -507,36 +564,26 @@ function startTypingTest(text, time) {
     timerStarted = false;
     excessCharacters = '';
     
-    document.getElementById('setup-form').style.display = 'none';
-    // Sanitize original text
+    // Sanitize original text but preserve whitespace
     text = sanitizeQuotesAndDashes(text);
     window.originalText = text;
-    // Remove non-breaking spaces that can occur in contenteditable divs
-    text = text.replace(/\u00A0/g, ' ');
-    // Initialize typing-text-live with character spans for highlighting
-    typingTextContainer.innerHTML = '';
     
-    // FIXED: Clone and replace the home button to remove existing event listeners
     const homeBtn = document.getElementById('home-button');
     const newHomeBtn = homeBtn.cloneNode(true);
     newHomeBtn.removeAttribute('onclick'); // Remove the onclick attribute to prevent double triggering
     homeBtn.parentNode.replaceChild(newHomeBtn, homeBtn);
-    
-    // Add new event listener to the fresh home button
     newHomeBtn.addEventListener('click', navigateHome);
     
-    // Remove previous event listener by cloning and replacing the button
     const reloadBtn = document.getElementById('reload-button');
     const newReloadBtn = reloadBtn.cloneNode(true);
     reloadBtn.parentNode.replaceChild(newReloadBtn, reloadBtn);
     
-    // Add new event listener to the fresh button element
     newReloadBtn.addEventListener('click', function() {
         if (!window.hasTestEnded && timerStarted) {
             if (confirm("Are you sure you want to restart the test? Your current progress will be lost.")) {
                 clearInterval(interval);
                 interval = null;
-                startTypingTest(window.originalText, time);
+                startTypingTest(text, time);
             }
         } else {
             if(confirm("Are you sure you want to restart the test?")){
@@ -545,24 +592,42 @@ function startTypingTest(text, time) {
                 // Force a complete reset of test state
                 window.hasTestEnded = false;
                 timerStarted = false;
-                startTypingTest(window.originalText, time);
+                startTypingTest(text, time);
             }
         }
         newReloadBtn.innerHTML = '<i class="fas fa-redo-alt"></i> Restart Test';
     });
-    
-    // Wrap each character in a span for individual styling
+
+    typingTextLive.innerHTML = '';
+    const divElement = document.createElement('div');
+    divElement.style.whiteSpace = 'pre-wrap';
+    divElement.style.fontFamily = 'inherit';
+    divElement.style.fontSize = 'inherit';
+    divElement.style.margin = '0';
+    divElement.style.wordBreak = 'break-word';
+
+    // Create spans for each character to enable styling
     for (let i = 0; i < text.length; i++) {
         const charSpan = document.createElement('span');
-        charSpan.textContent = text[i];
+        
+        // Preserve whitespace characters
+        if (text[i] === ' ') {
+            charSpan.innerHTML = '&nbsp;';
+        } else if (text[i] === '\n') {
+            charSpan.innerHTML = '<br>';
+        } else {
+            charSpan.textContent = text[i];
+        }
         
         // Highlight the first character to start
         if (i === 0) {
             charSpan.style.backgroundColor = 'yellow';
         }
         
-        typingTextContainer.appendChild(charSpan);
+        divElement.appendChild(charSpan);
     }
+    
+    typingTextLive.appendChild(divElement);
     
     typingTest.classList.add('active');
     typingInput.innerText = '';
@@ -605,16 +670,16 @@ function startTypingTest(text, time) {
 
         if (e.key === 'Backspace') {
             // Get current typed text before backspace takes effect
-            let currentTypedText = typingInput.innerText.replace(/\u00A0/g, ' ');
-            currentTypedText = sanitizeQuotesAndDashes(typingInput.innerText);
+            let typedText = typingInput.innerText.replace(/\u00A0/g, ' ');
+            typedText = sanitizeQuotesAndDashes(typedText);
             
             // After a brief delay to let the backspace take effect
             setTimeout(() => {
-                const charSpans = typingTextContainer.querySelectorAll('span');
+                const charSpans = typingTextLive.querySelectorAll('span');
                 const newTypedLength = typingInput.innerText.length;
                 
                 // If backspace was pressed at position > 0, reset styling for the character at the position
-                if (currentTypedText.length > 0 && newTypedLength < currentTypedText.length) {
+                if (typedText.length > 0 && newTypedLength < typedText.length) {
                     // Clear color of the character that was deleted
                     if (newTypedLength < charSpans.length) {
                         charSpans[newTypedLength].style.color = '';
@@ -634,14 +699,20 @@ function startTypingTest(text, time) {
     
     // Add input event listener to track typing progress and update highlighting
     typingInput.addEventListener('input', function() {
-        let typedText = typingInput.innerText.replace(/\u00A0/g, ' ');
+        // console.log("typingInput ascii:", typingInput.innerText.charCodeAt(i));
+        let typedText = typingInput.innerText.replace(/\n\n/g, '\n').replace(/\u00A0/g, ' ');
         typedText = sanitizeQuotesAndDashes(typedText);
-        // Force empty string if only newlines or whitespace
-        if (!typingInput.innerText.trim()) {
+        // console.log("startTypingTest typingInput text:", typedText);
+        for (let i = 0; i < typedText.length; i++) {
+            console.log(`Character: ${typedText[i]}, ASCII: ${typedText.charCodeAt(i)}`);
+        }
+    
+        // Force empty string if only whitespace
+        if (!typingInput.textContent) {
             typingInput.innerHTML = '';
         }
         
-        const charSpans = typingTextContainer.querySelectorAll('span');
+        const charSpans = typingTextLive.querySelectorAll('span');
         
         // Reset all spans for re-evaluation
         for (let i = 0; i < charSpans.length; i++) {
@@ -650,21 +721,24 @@ function startTypingTest(text, time) {
         }
         
         excessCharacters = '';
-
+        for (let i = 0; i < text.length; i++) {
+            // console.log(`Character: ${text[i]}, ASCII: ${text.charCodeAt(i)}`);
+            // console.log(`startTypingTest typedText[i]: ${typedText.charCodeAt(i)}, text[i]: ${text.charCodeAt(i)}`);
+        }
+        
+        console.log(`typtedText.length: ${typedText.length}, text.length: ${text.length}`);
         // Process each character that has been typed
         for (let i = 0; i < typedText.length; i++) {
             if (i < text.length) {
                 const isCorrect = typedText[i] === text[i];
-                // console.log(typedText[i], text[i], isCorrect, typedText.charCodeAt(i), text.charCodeAt(i));
-                // Special handling for spaces
-                if (text[i] === ' ') {
-                    if (typedText[i] === ' ') {
-                        // charSpans[i].style.backgroundColor = '#D4EFDF';
-                    } else {
+                
+                // Special handling for spaces (32) and newlines (10)
+                if (text.charCodeAt(i) == 32 || text.charCodeAt(i) == 10 || text.charCodeAt(i) == 13) {
+                    if (!isCorrect) {
                         charSpans[i].style.backgroundColor = 'red';
                     }
                 } else {
-                    // Regular styling for non-space characters
+                    // Regular styling for non-whitespace characters
                     charSpans[i].style.color = isCorrect ? 'green' : 'red';
                 }
             } else {
@@ -672,6 +746,9 @@ function startTypingTest(text, time) {
                 if (typedText[i] === ' ') {
                     // Space with red background
                     excessCharacters += '<span style="background-color: red;">&nbsp;</span>';
+                } else if (typedText[i] === '\n') {
+                    // Newline with red background
+                    excessCharacters += '<span style="background-color: red;"><br></span>';
                 } else {
                     // Regular character with red text
                     excessCharacters += '<span style="color: red;">' + typedText[i] + '</span>';
@@ -835,7 +912,7 @@ function calculateSpeed(charsTyped, elapsedTime) {
         const excessDiv = document.createElement('div');
         excessDiv.innerHTML = excessCharacters;
         excessDiv.style.display = 'inline-block';
-        typingTextContainer.appendChild(excessDiv);
+        typingTextLive.appendChild(excessDiv);
     }
 
     // Get the typed text (with non-breaking spaces converted to regular spaces)
@@ -892,8 +969,11 @@ function calculateSpeed(charsTyped, elapsedTime) {
 
     // Word accuracy metrics - keeping this part of the original code
     const typedWords = typedText.split(/\s+/);
+    console.log("typedWords:", typedWords.length);
     const originalWords = originalText.split(/\s+/);
+    console.log("originalWords:", originalWords.length);
     const totalTypedWords = typedWords.filter(word => word.trim().length > 0).length;
+    console.log("totalTypedWords:", totalTypedWords);
     const totalOriginalWords = originalWords.length;
     
     // Count correct and wrong words
@@ -903,11 +983,12 @@ function calculateSpeed(charsTyped, elapsedTime) {
             correctWords++;
         }
     }
-    const wrongWords = totalTypedWords - correctWords;
+    const wrongWords = Math.max(0, totalTypedWords - correctWords);
+    console.log("correctWords:", correctWords);
     
     // Calculate word percentages
     const correctWordsPercent = totalOriginalWords > 0 ? (correctWords / totalOriginalWords) * 100 : 0;
-    const wrongWordsPercent = totalOriginalWords > 0 ? ((totalTypedWords - correctWords) / totalOriginalWords) * 100 : 0;
+    const wrongWordsPercent = totalOriginalWords > 0 ? (wrongWords / totalOriginalWords) * 100 : 0;
 
     // Build results table with improved metrics
     const resultHTML = `
@@ -931,7 +1012,7 @@ function calculateSpeed(charsTyped, elapsedTime) {
           </tr>
           <tr>
               <td>Error Rate</td>
-              <td>${errorRate.toFixed(2)}%</td>
+              <td>${errorRate.toFixed(2)}%</</td>
           </tr>
           <tr>
               <td>Correct Characters (Original Text)</td>
@@ -986,13 +1067,15 @@ function calculateSpeed(charsTyped, elapsedTime) {
 }
 
 function updateWordCount() {
-  const text = customText.innerText.trim();
-  const words = text === '' ? 0 : text.split(/\s+/).length;
+  const text = customText.innerText.replace(/\u00A0/g, ' ');
+//   console.log("updateWordCount text:", text);
+  // Match non-space sequences for word counting
+  const wordMatches = text.match(/\S+/g);
+  const words = wordMatches ? wordMatches.length : 0;
   const limit = parseInt(wordLimitSelect.value) || 100;
-  const wordCountDiv = document.getElementById('word-count');
   
   // Only show word count if there is text
-  if (text === '') {
+  if (!text.trim()) {
     wordCountDiv.style.display = 'none';
     return;
   } else {
@@ -1004,10 +1087,10 @@ function updateWordCount() {
     
     // Warn if over limit
     if (words > limit) {
-        document.getElementById('word-count').innerHTML = `Word Count: <span style="${words > limit ? 'color:red;' : ''}">${words} > ${limit}</span>`;
-        document.getElementById('word-count').innerHTML += `<span style="color:red; font-size:0.8em;"> (So, text will be truncated to ${limit} words.)</span>`;
+        wordCountDiv.innerHTML = `Word Count: <span style="${words > limit ? 'color:red;' : ''}">${words} > ${limit}</span>`;
+        wordCountDiv.innerHTML += `<span style="color:red; font-size:0.8em;"> (So, text will be truncated to ${limit} words.)</span>`;
     }else {
-        document.getElementById('word-count').innerHTML = `Word Count: <span style="${words > limit ? 'color:red;' : ''}">${words}</span>`;
+        wordCountDiv.innerHTML = `Word Count: <span style="${words > limit ? 'color:red;' : ''}">${words}</span>`;
     }
   } else {
     wordCountDiv.innerText = `Word Count: ${words}`;
@@ -1115,8 +1198,14 @@ generateTextButton.addEventListener('click', async function() {
         // Call the generateText function to get text based on selected type
         const generatedText = await generateText();
         
-        // Put the generated text into the custom-text element
-        customText.innerText = generatedText;
+        // Put the generated text into the custom-text element, preserving whitespace
+        customText.innerHTML = '';
+        customText.appendChild(preservedText(generatedText));
+        
+        // console.log("Generated text:", generatedText);
+        // for (let i = 0; i < generatedText.length; i++) {
+        //     console.log(`Generated Character: ${generatedText[i]}, ASCII: ${generatedText.charCodeAt(i)}`);
+        // }
         
         // Update the word count display and ensure visibility
         updateWordCount();
