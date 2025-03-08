@@ -1046,6 +1046,98 @@ function findCapitalisationMistakes(originalText, typedText) {
     return capitalisationErrors;
 }
 
+function findSpacingMistakes(originalText, typedText) {
+    const spacingErrors = [];
+    
+    // Remove all whitespace to compare letter sequences
+    const origNoSpaces = originalText.replace(/\s/g, "");
+    const typedNoSpaces = typedText.replace(/\s/g, "");
+    
+    // If the letter sequences don't match, differences aren't just spacing issues
+    if (origNoSpaces !== typedNoSpaces) {
+        return spacingErrors; // Return empty array - not spacing errors
+    }
+    
+    // If texts are identical, no spacing issues
+    if (originalText === typedText) {
+        return spacingErrors;
+    }
+    
+    // Split both texts into words
+    const origWords = originalText.split(/\s+/).filter(w => w.length > 0);
+    const typedWords = typedText.split(/\s+/).filter(w => w.length > 0);
+    
+    // Compare words using a sliding window approach to match letter sequences
+    let origIndex = 0;
+    let typedIndex = 0;
+    
+    while (origIndex < origWords.length && typedIndex < typedWords.length) {
+        // Get current words from each text
+        const origWord = origWords[origIndex];
+        const typedWord = typedWords[typedIndex];
+        
+        // Check if the current words have the same letters
+        if (origWord.replace(/\s/g, "") === typedWord.replace(/\s/g, "")) {
+            // Simple case: spacing within the same word matches
+            origIndex++;
+            typedIndex++;
+            continue;
+        }
+        
+        // Try combining current word with next word(s) in original text
+        let origCombined = origWord;
+        let nextOrigIndex = origIndex + 1;
+        let origFound = false;
+        
+        while (nextOrigIndex < origWords.length) {
+            origCombined += origWords[nextOrigIndex];
+            
+            // If combined original words match current typed word (missing space error)
+            if (origCombined.replace(/\s/g, "") === typedWord.replace(/\s/g, "")) {
+                const originalPart = origWords.slice(origIndex, nextOrigIndex + 1).join(" ");
+                spacingErrors.push([originalPart, typedWord]);
+                origIndex = nextOrigIndex + 1;
+                typedIndex++;
+                origFound = true;
+                break;
+            }
+            
+            nextOrigIndex++;
+        }
+        
+        if (origFound) continue;
+        
+        // Try combining current word with next word(s) in typed text
+        let typedCombined = typedWord;
+        let nextTypedIndex = typedIndex + 1;
+        let typedFound = false;
+        
+        while (nextTypedIndex < typedWords.length) {
+            typedCombined += typedWords[nextTypedIndex];
+            
+            // If combined typed words match current original word (extra space error)
+            if (origWord.replace(/\s/g, "") === typedCombined.replace(/\s/g, "")) {
+                const typedPart = typedWords.slice(typedIndex, nextTypedIndex + 1).join(" ");
+                spacingErrors.push([origWord, typedPart]);
+                origIndex++;
+                typedIndex = nextTypedIndex + 1;
+                typedFound = true;
+                break;
+            }
+            
+            nextTypedIndex++;
+        }
+        
+        if (typedFound) continue;
+        
+        // If no pattern found, just advance both indices
+        origIndex++;
+        typedIndex++;
+    }
+    
+    return spacingErrors;
+}
+
 function findMistakes(originalText, typedText) {
     // console.log("originalText:", originalText.length);
     // console.log("typedText:", typedText.length);
@@ -1090,12 +1182,39 @@ function findMistakes(originalText, typedText) {
         `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`
     ).join('');
 
+    const spacingErrors = findSpacingMistakes(originalText, typedText);
+    const spacingErrorsList = spacingErrors.map(error => {
+        // Visualize spaces in both original and typed text, preserving multiple consecutive spaces
+        const originalWithVisibleSpaces = error[0].replace(/ /g, '<span>&nbsp;</span>');
+        
+        // For typed text with multiple spaces, replace EACH space with a visible red-background space
+        let typedWithVisibleSpaces = '';
+        for (let i = 0; i < error[1].length; i++) {
+            if (error[1][i] === ' ') {
+                // Every space gets its own span with red background
+                typedWithVisibleSpaces += '<span style="background-color:red;">&nbsp;</span>';
+            } else {
+                typedWithVisibleSpaces += error[1][i];
+            }
+        }
+        
+        return `<li><span style="color:green;">${originalWithVisibleSpaces}</span> => <span style="color:red;">${typedWithVisibleSpaces}</span></li>`;
+    }).join('');
+
     const mistakesHTML = `
       <h2 style="text-align:center;">Half Mistakes</h2>
       <table>
             <tr>
                 <th>Type</th>
                 <th>Mistakes</th>
+            </tr>
+            <tr>
+                <td><h4>Spacing Errors</h4></td>
+                <td><ul style="list-style-type: none;">${spacingErrorsList}</ul></td>
+            </tr>
+            <tr>
+                <td><h4>Capitalisation Errors</h4></td>
+                <td><ul style="list-style-type: none;">${capitalisationErrorsList}</ul></td>
             </tr>
             <tr>
                 <td><h4>Punctuation Errors</h4></td>
@@ -1108,10 +1227,6 @@ function findMistakes(originalText, typedText) {
             <tr>
                 <td><h4>Paragraphic Errors</h4></td>
                 <td><ul style="list-style-type: none;">${paragraphicErrorsList}</ul></td>
-            </tr>
-            <tr>
-                <td><h4>Capitalisation Errors</h4></td>
-                <td><ul style="list-style-type: none;">${capitalisationErrorsList}</ul></td>
             </tr>
       </table>
     `;
