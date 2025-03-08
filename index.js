@@ -329,6 +329,21 @@ function truncateTextToWordLimit(text, limit) {
     return pos !== -1 ? text.substring(0, pos) : text;
 }
 
+customText.addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        e.preventDefault(); // Stop the default tab behavior (moving focus)
+        insertTabAtCursor(this); // Insert a tab character at cursor position
+        
+        // Update word count (optional)
+        updateWordCount();
+        
+        // Show save button if needed
+        if (this.innerText.length > 0) {
+            saveTextBtn.style.display = 'inline-block';
+        }
+    }
+});
+
 // Generate random words
 async function generateText() {
     let wordLimit = parseInt(wordLimitSelect.value);

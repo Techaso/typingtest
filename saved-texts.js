@@ -447,6 +447,21 @@ function openEditModal(currentHeading, currentText, callback) {
     // Get the textarea and apply our comprehensive text cleaning function
     const editText = document.getElementById('edit-text');
     cleanAndPasteText(currentText, editText);
+    editText.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault(); // Stop the default tab behavior (moving focus)
+            
+            // Insert tab character at current position
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            
+            // Insert tab character
+            this.value = this.value.substring(0, start) + '\t' + this.value.substring(end);
+            
+            // Move cursor after the inserted tab
+            this.selectionStart = this.selectionEnd = start + 1;
+        }
+    });
     
     // Add paste event listener to handle paste events in the edit textarea
     editText.addEventListener('paste', function(e) {
