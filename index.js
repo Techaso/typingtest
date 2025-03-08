@@ -1029,6 +1029,23 @@ function findParagraphicMistakes(originalText, typedText) {
     return paragraphicErrors;
 }
 
+function findCapitalisationMistakes(originalText, typedText) {
+    const capitalisationErrors = [];
+    // Split both texts into words (filter empty strings)
+    const originalWords = originalText.split(/\s+/).filter(word => word.length > 0);
+    const typedWords = typedText.split(/\s+/).filter(word => word.length > 0);
+    const minLength = Math.min(originalWords.length, typedWords.length);
+    
+    for (let i = 0; i < minLength; i++) {
+        // If words are not identical but match when lowercased, it's a capitalisation error.
+        if (originalWords[i] !== typedWords[i] &&
+            originalWords[i].toLowerCase() === typedWords[i].toLowerCase()) {
+            capitalisationErrors.push([originalWords[i], typedWords[i]]);
+        }
+    }
+    return capitalisationErrors;
+}
+
 function findMistakes(originalText, typedText) {
     // console.log("originalText:", originalText.length);
     // console.log("typedText:", typedText.length);
@@ -1068,25 +1085,34 @@ function findMistakes(originalText, typedText) {
         return `<li>${expectedHtml} => ${actualHtml}</li>`;
     }).join('');
 
+    const capitalisationErrors = findCapitalisationMistakes(originalText, typedText);
+    const capitalisationErrorsList = capitalisationErrors.map(error => 
+        `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`
+    ).join('');
+
     const mistakesHTML = `
       <h2 style="text-align:center;">Half Mistakes</h2>
       <table>
-          <tr>
-              <th>Type</th>
-              <th>Mistakes</th>
-          </tr>
-          <tr>
-              <td><h4>Punctuation Errors</h4></td>
-              <td><ul style="list-style-type: none;">${punctuationErrorsList}</ul></td>
-          </tr>
-          <tr>
-              <td><h4>Transposition Errors</h4></td>
-              <td><ul style="list-style-type: none;">${transpositionErrorsList}</ul></td>
-          </tr>
-          <tr>
-              <td><h4>Paragraphic Errors</h4></td>
-              <td><ul style="list-style-type: none;">${paragraphicErrorsList}</ul></td>
-          </tr>
+            <tr>
+                <th>Type</th>
+                <th>Mistakes</th>
+            </tr>
+            <tr>
+                <td><h4>Punctuation Errors</h4></td>
+                <td><ul style="list-style-type: none;">${punctuationErrorsList}</ul></td>
+            </tr>
+            <tr>
+                <td><h4>Transposition Errors</h4></td>
+                <td><ul style="list-style-type: none;">${transpositionErrorsList}</ul></td>
+            </tr>
+            <tr>
+                <td><h4>Paragraphic Errors</h4></td>
+                <td><ul style="list-style-type: none;">${paragraphicErrorsList}</ul></td>
+            </tr>
+            <tr>
+                <td><h4>Capitalisation Errors</h4></td>
+                <td><ul style="list-style-type: none;">${capitalisationErrorsList}</ul></td>
+            </tr>
       </table>
     `;
     
