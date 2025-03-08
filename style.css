@@ -164,7 +164,7 @@ form {
     align-items: center;
 }
 
-#test-results {
+#test-results, #test-analysis {
     width: 100%;
     max-width: 1000px;
     overflow-x: auto;
@@ -176,20 +176,20 @@ form {
     /* margin-top: 20px; */
 }
 
-#test-results table {
+#test-results table, #test-analysis table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 20px;
 }
 
 #test-results th,
-#test-results td {
+#test-results td, #test-analysis th, #test-analysis td {
     border: 1px solid #ccc;
     padding: 8px;
     text-align: center;
 }
 
-#test-results th {
+#test-results th, #test-analysis th {
     background-color: #f5f5f5;
 }
 
