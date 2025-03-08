@@ -974,6 +974,29 @@ function findPunctuationMistakes(originalText, typedText) {
     return punctuationErrors;
 }
 
+function findTranspositionMistakes(originalText, typedText) {
+    const transpositionErrors = [];
+    // Split texts into words and filter out any empty strings
+    const originalWords = originalText.split(/\s+/).filter(word => word.length > 0);
+    const typedWords = typedText.split(/\s+/).filter(word => word.length > 0);
+    
+    // Iterate over words in the overlapping portion (minus one to allow a pair check)
+    const limit = Math.min(originalWords.length, typedWords.length) - 1;
+    for (let i = 0; i < limit; i++) {
+        if (originalWords[i] === originalWords[i+1]) {
+            continue;
+        }
+        // Check for an adjacent swapped pair:
+        // expected: [originalWords[i], originalWords[i+1]]
+        // typed: [typedWords[i], typedWords[i+1]] where they are transposed
+        if (originalWords[i] === typedWords[i+1] && originalWords[i+1] === typedWords[i]) {
+            transpositionErrors.push([originalWords[i] + " " + originalWords[i+1], typedWords[i] + " " + typedWords[i+1]]);
+            i++; // Skip the next index since this pair has been processed.
+        }
+    }
+    return transpositionErrors;
+}
+
 function findMistakes(originalText, typedText) {
     // console.log("originalText:", originalText.length);
     // console.log("typedText:", typedText.length);
@@ -987,6 +1010,9 @@ function findMistakes(originalText, typedText) {
     const punctuationErrors = findPunctuationMistakes(originalText, typedText);
     const punctuationErrorsList = punctuationErrors.map(error => `<li><span style="color:green;">${error[1]}</span> => <span style="color:red;">${error[0]}</span></li>`).join('');
 
+    const transpositionErrors = findTranspositionMistakes(originalText, typedText);
+    const transpositionErrorsList = transpositionErrors.map(error => `<li><span style="color:green;">${error[1]}</span> => <span style="color:red;">${error[0]}</span></li>`).join('');
+
     const mistakesHTML = `
       <h2 style="text-align:center;">Half Mistakes</h2>
       <table>
@@ -997,6 +1023,10 @@ function findMistakes(originalText, typedText) {
           <tr>
               <td><h4>Punctuation Errors</h4></td>
               <td><ul style="list-style-type: none;">${punctuationErrorsList}</ul></td>
+          </tr>
+          <tr>
+              <td><h4>Transposition Errors</h4></td>
+              <td><ul style="list-style-type: none;">${transpositionErrorsList}</ul></td>
           </tr>
       </table>
     `;
