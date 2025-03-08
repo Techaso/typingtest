@@ -113,6 +113,7 @@ form {
     resize: none;
     white-space: pre-wrap;
     word-wrap: break-word;
+    tab-size: 4; /* NEW: enable correct tab spacing */
 }
 #text-container {
     margin-top: 15px;

@@ -15,7 +15,7 @@ const uploadContainer = document.getElementById('upload-container');
 const wordLimitSelect = document.getElementById('wordLimit');
 const customWordLimitInput = document.getElementById('customWordLimit');
 const typingTest = document.getElementById('typing-test');
-const typingInput = document.getElementById('typing-input');
+let typingInput = document.getElementById('typing-input');
 const testResults = document.getElementById('test-results');
 const timerDisplay = document.getElementById('timer-display');
 const endTest = document.getElementById('end-test');
@@ -28,6 +28,9 @@ const aiContainer = document.getElementById('ai-container');
 
 // Add these global variables
 let interval;
+let startTime;
+let elapsedTime;
+let remainingTime;
 let timerStarted = false;
 let excessCharacters = '';
 
@@ -577,23 +580,32 @@ function startTypingTest(text, time) {
     const reloadBtn = document.getElementById('reload-button');
     const newReloadBtn = reloadBtn.cloneNode(true);
     reloadBtn.parentNode.replaceChild(newReloadBtn, reloadBtn);
+
+    startTime = Date.now();
     
+    // In your reload button event, replace the typingInput element
     newReloadBtn.addEventListener('click', function() {
-        if (!window.hasTestEnded && timerStarted) {
-            if (confirm("Are you sure you want to restart the test? Your current progress will be lost.")) {
+        if (confirm("Are you sure you want to restart the test? Your current progress will be lost.")) {
+            if (interval) {
                 clearInterval(interval);
                 interval = null;
-                startTypingTest(text, time);
             }
-        } else {
-            if(confirm("Are you sure you want to restart the test?")){
-                clearInterval(interval);
-                interval = null;
-                // Force a complete reset of test state
-                window.hasTestEnded = false;
-                timerStarted = false;
-                startTypingTest(text, time);
-            }
+            // Create a completely new typing input element to replace the old one
+            const newTypingInput = document.createElement('div');
+            newTypingInput.id = 'typing-input';
+            newTypingInput.className = typingInput.className; 
+            newTypingInput.setAttribute('contenteditable', 'true');
+            newTypingInput.style.cssText = typingInput.style.cssText;
+            
+            // Replace the old element with the new one
+            typingInput.parentNode.replaceChild(newTypingInput, typingInput);
+            
+            // Update the global reference to typingInput
+            typingInput = newTypingInput;
+
+            excessCharacters = '';
+            startTime = Date.now();
+            startTypingTest(text, time);
         }
         newReloadBtn.innerHTML = '<i class="fas fa-redo-alt"></i> Restart Test';
     });
@@ -610,11 +622,13 @@ function startTypingTest(text, time) {
     for (let i = 0; i < text.length; i++) {
         const charSpan = document.createElement('span');
         
-        // Preserve whitespace characters
+        // Preserve whitespace characters including tab
         if (text[i] === ' ') {
             charSpan.innerHTML = '&nbsp;';
         } else if (text[i] === '\n') {
             charSpan.innerHTML = '<br>';
+        } else if (text[i] === '\t') {
+            charSpan.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;'; // Render tab as 4 spaces
         } else {
             charSpan.textContent = text[i];
         }
@@ -630,12 +644,34 @@ function startTypingTest(text, time) {
     typingTextLive.appendChild(divElement);
     
     typingTest.classList.add('active');
-    typingInput.innerText = '';
+    typingInput.innerHTML = '';
     typingInput.focus();
     updateTimerDisplay(time);
     
-    // Always create a fresh startTime that will be assigned on first keypress
-    let startTime = Date.now();
+
+    // Remove any existing event listeners from End Test button
+    const endTestBtn = document.getElementById('end-test');
+    const newEndTestBtn = endTestBtn.cloneNode(true);
+    endTestBtn.parentNode.replaceChild(newEndTestBtn, endTestBtn);
+    // End Test button event
+    newEndTestBtn.addEventListener('click', function() {
+        if (interval) {
+            clearInterval(interval);
+            interval = null;
+        }
+        // If there's still time remaining on the clock, confirm submission
+        if (remainingTime > 0 || isNaN(remainingTime)) {
+            showConfirmSubmitModal(function(confirmed) {
+                if (confirmed) {
+                    updateTimerDisplay(time);
+                    calculateSpeed(typingInput.innerText.length, elapsedTime);
+                }
+            });
+        } else {
+            updateTimerDisplay(time);
+            calculateSpeed(typingInput.innerText.length, elapsedTime);
+        }
+    });
     
     // Update paste event listener to use cleanAndPasteText function for proper handling of formatted text
     typingInput.addEventListener('paste', function(e) {
@@ -649,14 +685,14 @@ function startTypingTest(text, time) {
         // Start timer on first key press
         if (!timerStarted) {
             timerStarted = true;
-            // Clear any existing interval just to be safe
             if (interval) {
                 clearInterval(interval);
                 interval = null;
             }
             interval = setInterval(() => {
-                let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-                let remainingTime = time - elapsedTime;
+                elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+                console.log("elapsedTime:", elapsedTime);
+                remainingTime = time - elapsedTime;
                 if (remainingTime <= 0) {
                     updateTimerDisplay(0);
                     clearInterval(interval);
@@ -693,19 +729,35 @@ function startTypingTest(text, time) {
                     }
                 }
             }, 10);
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            insertTabAtCursor(this);
+            // Highlight the character after the tab space
+            setTimeout(() => {
+                let typedText = typingInput.innerText.replace(/\n\n/g, '\n').replace(/\u00A0/g, ' ');
+                typedText = sanitizeQuotesAndDashes(typedText);
+                const charSpans = typingTextLive.querySelectorAll('span');
+                for (let i = 0; i < charSpans.length; i++) {
+                    charSpans[i].style.backgroundColor = '';
+                    charSpans[i].style.color = '';
+                }
+                if (typedText.length < window.originalText.length) {
+                    charSpans[typedText.length].style.backgroundColor = 'yellow';
+                }
+                console.log("tab typedText.length:", typedText.length);
+            }, 10);
         }
         
     });
     
     // Add input event listener to track typing progress and update highlighting
     typingInput.addEventListener('input', function() {
-        // console.log("typingInput ascii:", typingInput.innerText.charCodeAt(i));
         let typedText = typingInput.innerText.replace(/\n\n/g, '\n').replace(/\u00A0/g, ' ');
         typedText = sanitizeQuotesAndDashes(typedText);
         // console.log("startTypingTest typingInput text:", typedText);
-        for (let i = 0; i < typedText.length; i++) {
-            console.log(`Character: ${typedText[i]}, ASCII: ${typedText.charCodeAt(i)}`);
-        }
+        // for (let i = 0; i < typedText.length; i++) {
+        //     console.log(`Character: ${typedText[i]}, ASCII: ${typedText.charCodeAt(i)}`);
+        // }
     
         // Force empty string if only whitespace
         if (!typingInput.textContent) {
@@ -721,21 +773,23 @@ function startTypingTest(text, time) {
         }
         
         excessCharacters = '';
-        for (let i = 0; i < text.length; i++) {
-            // console.log(`Character: ${text[i]}, ASCII: ${text.charCodeAt(i)}`);
-            // console.log(`startTypingTest typedText[i]: ${typedText.charCodeAt(i)}, text[i]: ${text.charCodeAt(i)}`);
-        }
+        // for (let i = 0; i < text.length; i++) {
+        //     console.log(`Character: ${text[i]}, ASCII: ${text.charCodeAt(i)}`);
+        //     console.log(`startTypingTest typedText[i]: ${typedText.charCodeAt(i)}, text[i]: ${text.charCodeAt(i)}`);
+        // }
         
-        console.log(`typtedText.length: ${typedText.length}, text.length: ${text.length}`);
+        // console.log(`typtedText.length: ${typedText.length}, text.length: ${text.length}`);
         // Process each character that has been typed
         for (let i = 0; i < typedText.length; i++) {
             if (i < text.length) {
                 const isCorrect = typedText[i] === text[i];
-                
+                console.log(`startTypingTest typedText[i]: ${typedText.charCodeAt(i)}, text[i]: ${text.charCodeAt(i)}`);
                 // Special handling for spaces (32) and newlines (10)
-                if (text.charCodeAt(i) == 32 || text.charCodeAt(i) == 10 || text.charCodeAt(i) == 13) {
+                if (text.charCodeAt(i) == 32 || text.charCodeAt(i) == 10 || text.charCodeAt(i) == 13 || text.charCodeAt(i) == 9) {
                     if (!isCorrect) {
                         charSpans[i].style.backgroundColor = 'red';
+                    }else {
+                        charSpans[i].style.backgroundColor = '';
                     }
                 } else {
                     // Regular styling for non-whitespace characters
@@ -749,6 +803,9 @@ function startTypingTest(text, time) {
                 } else if (typedText[i] === '\n') {
                     // Newline with red background
                     excessCharacters += '<span style="background-color: red;"><br></span>';
+                } else if (typedText[i] === '\t') {
+                    // Tab with red background
+                    excessCharacters += '<span style="background-color: red;">&nbsp;&nbsp;&nbsp;&nbsp;</span>';
                 } else {
                     // Regular character with red text
                     excessCharacters += '<span style="color: red;">' + typedText[i] + '</span>';
@@ -756,47 +813,19 @@ function startTypingTest(text, time) {
             }
         }
         
+        for (let i = 0; i < typedText.length; i++) {
+            // console.log(`Character: ${text[i]}, ASCII: ${text.charCodeAt(i)}`);
+            console.log(`startTypingTest typedText[i]: ${typedText.charCodeAt(i)}, text[i]: ${text.charCodeAt(i)}`);
+        }
         // Highlight current position if within text bounds
         if (typedText.length < text.length) {
+            // console.log("charSpans[typedText.length]:", charSpans[typedText.length]);
             charSpans[typedText.length].style.backgroundColor = 'yellow';
         }
     });
 
     typingInput.style.overflowY = 'hidden';
-    
-    // Remove any existing event listeners from End Test button
-    const endTestBtn = document.getElementById('end-test');
-    const newEndTestBtn = endTestBtn.cloneNode(true);
-    endTestBtn.parentNode.replaceChild(newEndTestBtn, endTestBtn);
-    
-    // End Test button event
-    newEndTestBtn.addEventListener('click', function() {
-        // Calculate how much time has elapsed
-        let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-        let remainingTime = time - elapsedTime;
-        
-        // If there's still time remaining on the clock, confirm submission
-        if (remainingTime > 0 || isNaN(remainingTime)) {
-            showConfirmSubmitModal(function(confirmed) {
-                if (confirmed) {
-                    if (interval) {
-                        clearInterval(interval);
-                        interval = null;
-                    }
-                    // Reset timer display when submitting early
-                    updateTimerDisplay(time);
-                    calculateSpeed(typingInput.innerText.length, elapsedTime);
-                }
-            });
-        } else {
-            // If timer already finished, just submit
-            if (interval) {
-                clearInterval(interval);
-                interval = null;
-            }
-            calculateSpeed(typingInput.innerText.length, elapsedTime);
-        }
-    });
+
 }
 
 function showConfirmSubmitModal(callback) {
@@ -1222,3 +1251,21 @@ generateTextButton.addEventListener('click', async function() {
         this.disabled = false;
     }
 });
+
+// NEW: Function to insert a tab at the cursor position
+function insertTabAtCursor(el) {
+	// Get current selection and range
+	const sel = window.getSelection();
+	if (sel.rangeCount) {
+		const range = sel.getRangeAt(0);
+		range.deleteContents();
+		const tabNode = document.createTextNode('\t');
+		range.insertNode(tabNode);
+		range.setStartAfter(tabNode);
+		range.collapse(true);
+		sel.removeAllRanges();
+		sel.addRange(range);
+	} else {
+		el.innerText += '\t';
+	}
+}
