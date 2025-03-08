@@ -997,6 +997,38 @@ function findTranspositionMistakes(originalText, typedText) {
     return transpositionErrors;
 }
 
+function findParagraphicMistakes(originalText, typedText) {
+    const paragraphicErrors = [];
+    
+    const origParas = originalText.split(/\n/);
+    const typedParas = typedText.split(/\n/);
+    const count = Math.min(origParas.length, typedParas.length);
+    
+    for (let i = 0; i < count; i++) {
+        // Get leading whitespace from each paragraph
+        const origMatch = origParas[i].match(/^(\s+)/);
+        const typedMatch = typedParas[i].match(/^(\s+)/);
+        const origIndent = origMatch ? origMatch[1] : "";
+        const typedIndent = typedMatch ? typedMatch[1] : "";
+        
+        // Extract the first word after the indent
+        const origFirstWordMatch = origParas[i].substring(origIndent.length).match(/^(\S+)/);
+        const typedFirstWordMatch = typedParas[i].substring(typedIndent.length).match(/^(\S+)/);
+        
+        const origFirstWord = origFirstWordMatch ? origFirstWordMatch[1] : "";
+        const typedFirstWord = typedFirstWordMatch ? typedFirstWordMatch[1] : "";
+        
+        // Check for tab vs spaces difference
+        if ((origIndent.includes('\t') && !typedIndent.includes('\t')) ||
+            (!origIndent.includes('\t') && typedIndent.includes('\t'))) {
+            // Store the indentation along with the first word
+            paragraphicErrors.push([origIndent + origFirstWord, typedIndent + typedFirstWord]);
+        }
+    }
+    
+    return paragraphicErrors;
+}
+
 function findMistakes(originalText, typedText) {
     // console.log("originalText:", originalText.length);
     // console.log("typedText:", typedText.length);
@@ -1013,6 +1045,29 @@ function findMistakes(originalText, typedText) {
     const transpositionErrors = findTranspositionMistakes(originalText, typedText);
     const transpositionErrorsList = transpositionErrors.map(error => `<li><span style="color:green;">${error[1]}</span> => <span style="color:red;">${error[0]}</span></li>`).join('');
 
+    const paragraphicErrors = findParagraphicMistakes(originalText, typedText);
+    // In findMistakes function, update this part:
+    const paragraphicErrorsList = paragraphicErrors.map(error => {
+        const [origIndentWithWord, typedIndentWithWord] = error;
+        
+        // Find where the indent ends and the word begins
+        const origMatch = origIndentWithWord.match(/^(\s+)(.*)$/);
+        const typedMatch = typedIndentWithWord.match(/^(\s+)(.*)$/);
+        
+        // If there's an indent, separate it from the word
+        let origIndent = origMatch ? origMatch[1] : "";
+        let origWord = origMatch ? origMatch[2] : origIndentWithWord;
+        
+        let typedIndent = typedMatch ? typedMatch[1] : "";
+        let typedWord = typedMatch ? typedMatch[2] : typedIndentWithWord;
+        
+        // Format the expected and actual HTML with colored indentation
+        const expectedHtml = `<span style="background-color:green;">${origIndent.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;")}</span>${origWord}`;
+        const actualHtml = `<span style="background-color:red;">${typedIndent.replace(/ /g, "&nbsp;")}</span>${typedWord}`;
+        
+        return `<li>${expectedHtml} => ${actualHtml}</li>`;
+    }).join('');
+
     const mistakesHTML = `
       <h2 style="text-align:center;">Half Mistakes</h2>
       <table>
@@ -1027,6 +1082,10 @@ function findMistakes(originalText, typedText) {
           <tr>
               <td><h4>Transposition Errors</h4></td>
               <td><ul style="list-style-type: none;">${transpositionErrorsList}</ul></td>
+          </tr>
+          <tr>
+              <td><h4>Paragraphic Errors</h4></td>
+              <td><ul style="list-style-type: none;">${paragraphicErrorsList}</ul></td>
           </tr>
       </table>
     `;
