@@ -1138,6 +1138,62 @@ function findSpacingMistakes(originalText, typedText) {
     return spacingErrors;
 }
 
+function findOmissionMistakes(originalText, typedText) {
+    const omissionErrors = [];
+    // Helper to remove punctuation from a word
+    function normalize(word) {
+        // Adjust punctuation characters as needed
+        return word.replace(/[.,!?;:'"()\[\]{}\\\/]/g, "");
+    }
+    
+    // Split texts into words (filter out any empty strings)
+    const originalWords = originalText.split(/\s+/).filter(w => w.length > 0);
+    const typedWords = typedText.split(/\s+/).filter(w => w.length > 0);
+    
+    let i = 0, j = 0;
+    while (i < originalWords.length && j < typedWords.length) {
+        // Compare normalized forms so punctuation differences are ignored
+        if (normalize(originalWords[i]) === normalize(typedWords[j])) {
+            i++;
+            j++;
+        } else {
+            // Start a block of omissions from the original text.
+            let start = i;
+            // Advance i until we reach a word that matches typedWords[j] (using normalized forms)
+            while (i < originalWords.length && (j >= typedWords.length || normalize(originalWords[i]) !== normalize(typedWords[j]))) {
+                i++;
+            }
+            const count = i - start;
+            if (count === 1) {
+                omissionErrors.push([originalWords[start], 1]);
+            } else if (count === 2) {
+                omissionErrors.push([`${originalWords[start]} ${originalWords[start+1]}`, 2]);
+            } else if (count > 2) {
+                omissionErrors.push([`${originalWords[start]} … ${originalWords[i - 1]}`, count]);
+            }
+            // Do not advance j here; we try to match the next original word with the current j.
+        }
+    }
+    
+    // Any remaining words from original text are considered omissions.
+    while (i < originalWords.length) {
+        let start = i;
+        while (i < originalWords.length) {
+            i++;
+        }
+        const count = i - start;
+        if (count === 1) {
+            omissionErrors.push([originalWords[start], 1]);
+        } else if (count === 2) {
+            omissionErrors.push([`${originalWords[start]} ${originalWords[start+1]}`, 2]);
+        } else if (count > 2) {
+            omissionErrors.push([`${originalWords[start]} … ${originalWords[i - 1]}`, count]);
+        }
+    }
+    
+    return omissionErrors;
+}
+
 function findMistakes(originalText, typedText) {
     // console.log("originalText:", originalText.length);
     // console.log("typedText:", typedText.length);
@@ -1201,9 +1257,49 @@ function findMistakes(originalText, typedText) {
         return `<li><span style="color:green;">${originalWithVisibleSpaces}</span> => <span style="color:red;">${typedWithVisibleSpaces}</span></li>`;
     }).join('');
 
+    const omissionErrors = findOmissionMistakes(originalText, typedText);
+    const omissionErrorsList = omissionErrors.map(error => {
+        if(error[1] === 1) {
+            return `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]} word missed</span></li>`
+        } else {
+            return `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]} words missed</span></li>`
+        }}).join('');
+
     const mistakesHTML = `
-      <h2 style="text-align:center;">Half Mistakes</h2>
-      <table>
+        <h2 style="text-align:center;">Full Mistakes</h2>
+        <table>
+                <tr>
+                    <th>Type</th>
+                    <th>Mistakes</th>
+                </tr>
+                <tr>
+                    <td><h4>Omission Errors</h4></td>
+                    <td><ul style="list-style-type: none;">${omissionErrorsList}</ul></td>
+                </tr>
+                <tr>
+                    <td><h4>Substitution Errors</h4></td>
+                    <td><ul style="list-style-type: none;"></ul></td>
+                </tr>
+                <tr>
+                    <td><h4>Addition Errors</h4></td>
+                    <td><ul style="list-style-type: none;"></ul></td>
+                </tr>
+                <tr>
+                    <td><h4>Spelling Errors</h4></td>
+                    <td><ul style="list-style-type: none;"></ul></td>
+                </tr>
+                <tr>
+                    <td><h4>Repetition Errors</h4></td>
+                    <td><ul style="list-style-type: none;"></ul></td>
+                </tr>
+                <tr>
+                    <td><h4>Incompletition Errors</h4></td>
+                    <td><ul style="list-style-type: none;"></ul></td>
+                </tr>
+        </table>
+
+        <h2 style="text-align:center;">Half Mistakes</h2>
+        <table>
             <tr>
                 <th>Type</th>
                 <th>Mistakes</th>
@@ -1228,7 +1324,7 @@ function findMistakes(originalText, typedText) {
                 <td><h4>Paragraphic Errors</h4></td>
                 <td><ul style="list-style-type: none;">${paragraphicErrorsList}</ul></td>
             </tr>
-      </table>
+        </table>
     `;
     
     testAnalysis.innerHTML = mistakesHTML;
