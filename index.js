@@ -1292,6 +1292,59 @@ function findAdditionMistakes(originalText, typedText) {
     return additionErrors;
 }
 
+function findSpellingMistakes(originalText, typedText) {
+    const spellingErrors = [];
+    const origWords = originalText.split(/\s+/).filter(w => w.length > 0);
+    const typedWords = typedText.split(/\s+/).filter(w => w.length > 0);
+    const minLength = Math.min(origWords.length, typedWords.length);
+  
+    // Helper function: Compute Levenshtein distance between two strings
+    function levenshtein(a, b) {
+        const matrix = [];
+        const aLen = a.length, bLen = b.length;
+        // If one string is empty, the distance is the length of the other.
+        if (aLen === 0) return bLen;
+        if (bLen === 0) return aLen;
+      
+        // Initialize first row and column.
+        for (let i = 0; i <= aLen; i++) {
+            matrix[i] = [i];
+        }
+        for (let j = 0; j <= bLen; j++) {
+            matrix[0][j] = j;
+        }
+      
+        // Fill in the rest of the matrix.
+        for (let i = 1; i <= aLen; i++) {
+            for (let j = 1; j <= bLen; j++) {
+                const substitutionCost = a[i - 1].toLowerCase() === b[j - 1].toLowerCase() ? 0 : 1;
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j] + 1,          // deletion
+                    matrix[i][j - 1] + 1,          // insertion
+                    matrix[i - 1][j - 1] + substitutionCost  // substitution
+                );
+            }
+        }
+        return matrix[aLen][bLen];
+    }
+  
+    // For each overlapping word, if they are not identical,
+    // and the relative edit distance is small (≤ 30%), mark as a spelling error.
+    for (let i = 0; i < minLength; i++) {
+        const origWord = origWords[i];
+        const typedWord = typedWords[i];
+        if (origWord === typedWord) continue;
+      
+        const dist = levenshtein(origWord, typedWord);
+        // Avoid flagging large differences. You can adjust the ratio (0.3) as needed.
+        if (dist > 0 && (dist / origWord.length) <= 0.3) {
+            spellingErrors.push([origWord, typedWord]);
+        }
+    }
+  
+    return spellingErrors;
+}
+
 function findMistakes(originalText, typedText) {
     // console.log("originalText:", originalText.length);
     // console.log("typedText:", typedText.length);
@@ -1373,6 +1426,11 @@ function findMistakes(originalText, typedText) {
         .map(error => `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`)
         .join('');
 
+    const spellingErrors = findSpellingMistakes(originalText, typedText);
+    const spellingErrorsList = spellingErrors
+        .map(error => `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`)
+        .join('');
+
     const mistakesHTML = `
         <h2 style="text-align:center;">Full Mistakes</h2>
         <table>
@@ -1394,7 +1452,7 @@ function findMistakes(originalText, typedText) {
                 </tr>
                 <tr>
                     <td><h4>Spelling Errors</h4></td>
-                    <td><ul style="list-style-type: none;"></ul></td>
+                    <td><ul style="list-style-type: none;">${spellingErrorsList}</ul></td>
                 </tr>
                 <tr>
                     <td><h4>Repetition Errors</h4></td>
