@@ -1345,6 +1345,47 @@ function findSpellingMistakes(originalText, typedText) {
     return spellingErrors;
 }
 
+function findRepetitionMistakes(originalText, typedText) {
+    const repetitionErrors = [];
+    const origWords = originalText.split(/\s+/).filter(w => w.length > 0);
+    const typedWords = typedText.split(/\s+/).filter(w => w.length > 0);
+  
+    let i = 0, j = 0;
+    while (i < origWords.length && j < typedWords.length) {
+        // Compare words ignoring case
+        if (origWords[i].toLowerCase() === typedWords[j].toLowerCase()) {
+            // Count repetitions in typedText
+            let repCount = 1;
+            const startJ = j;
+            while (j + 1 < typedWords.length && typedWords[j + 1].toLowerCase() === typedWords[j].toLowerCase()) {
+                repCount++;
+                j++;
+            }
+            // Count any repetition in the original text at this point
+            let origRepCount = 1;
+            let k = i;
+            while (k + 1 < origWords.length && origWords[k + 1].toLowerCase() === origWords[k].toLowerCase()) {
+                origRepCount++;
+                k++;
+            }
+            // If typedText has more repetitions than original, record error
+            if (repCount > origRepCount) {
+                repetitionErrors.push([
+                    origWords[i],
+                    typedWords.slice(startJ, startJ + repCount).join(" ")
+                ]);
+            }
+            i++;
+            j++;
+        } else {
+            // If words don't match (could be due to other error types), advance both pointers.
+            i++;
+            j++;
+        }
+    }
+    return repetitionErrors;
+}
+
 function findMistakes(originalText, typedText) {
     // console.log("originalText:", originalText.length);
     // console.log("typedText:", typedText.length);
@@ -1431,6 +1472,11 @@ function findMistakes(originalText, typedText) {
         .map(error => `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`)
         .join('');
 
+    const repetitionErrors = findRepetitionMistakes(originalText, typedText);
+    const repetitionErrorsList = repetitionErrors
+        .map(error => `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`)
+        .join('');
+
     const mistakesHTML = `
         <h2 style="text-align:center;">Full Mistakes</h2>
         <table>
@@ -1456,7 +1502,7 @@ function findMistakes(originalText, typedText) {
                 </tr>
                 <tr>
                     <td><h4>Repetition Errors</h4></td>
-                    <td><ul style="list-style-type: none;"></ul></td>
+                    <td><ul style="list-style-type: none;">${repetitionErrorsList}</ul></td>
                 </tr>
                 <tr>
                     <td><h4>Incompletition Errors</h4></td>
