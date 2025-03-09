@@ -1386,6 +1386,27 @@ function findRepetitionMistakes(originalText, typedText) {
     return repetitionErrors;
 }
 
+function findIncompletionMistakes(originalText, typedText) {
+    const incompletionErrors = [];
+    const origWords = originalText.split(/\s+/).filter(w => w.length > 0);
+    const typedWords = typedText.split(/\s+/).filter(w => w.length > 0);
+    const minLength = Math.min(origWords.length, typedWords.length);
+
+    for (let i = 0; i < minLength; i++) {
+        const origWord = origWords[i];
+        const typedWord = typedWords[i];
+        // If the typed word is shorter than the original,
+        // is at least half as long, and is a prefix of the original,
+        // flag it as an incompletion error.
+        if (typedWord.length < origWord.length &&
+            typedWord.length >= Math.floor(origWord.length / 2) &&
+            origWord.startsWith(typedWord)) {
+            incompletionErrors.push([origWord, typedWord]);
+        }
+    }
+    return incompletionErrors;
+}
+
 function findMistakes(originalText, typedText) {
     // console.log("originalText:", originalText.length);
     // console.log("typedText:", typedText.length);
@@ -1477,6 +1498,11 @@ function findMistakes(originalText, typedText) {
         .map(error => `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`)
         .join('');
 
+    const incompletionErrors = findIncompletionMistakes(originalText, typedText);
+    const incompletionErrorsList = incompletionErrors
+        .map(error => `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`)
+        .join('');
+
     const mistakesHTML = `
         <h2 style="text-align:center;">Full Mistakes</h2>
         <table>
@@ -1506,7 +1532,7 @@ function findMistakes(originalText, typedText) {
                 </tr>
                 <tr>
                     <td><h4>Incompletition Errors</h4></td>
-                    <td><ul style="list-style-type: none;"></ul></td>
+                    <td><ul style="list-style-type: none;">${incompletionErrorsList}</ul></td>
                 </tr>
         </table>
 
