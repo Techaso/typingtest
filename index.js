@@ -1250,6 +1250,48 @@ function findSubstitutionMistakes(originalText, typedText) {
     return substitutionErrors;
 }
 
+function findAdditionMistakes(originalText, typedText) {
+    const additionErrors = [];
+    const normalize = word => word.toLowerCase();
+    const origWords = originalText.split(/\s+/).filter(w => w.length > 0);
+    const typedWords = typedText.split(/\s+/).filter(w => w.length > 0);
+    
+    let i = 0, j = 0;
+    while (i < origWords.length && j < typedWords.length) {
+        if (normalize(origWords[i]) === normalize(typedWords[j])) {
+            i++;
+            j++;
+        } else {
+            // Group consecutive extra words from typedText
+            let start = j;
+            while (j < typedWords.length && (i >= origWords.length || normalize(typedWords[j]) !== normalize(origWords[i]))) {
+                j++;
+            }
+            let count = j - start;
+            let block = typedWords.slice(start, j).join(" ");
+            if (count > 2) {
+                let displayBlock = `${typedWords[start]} … ${typedWords[j - 1]}`;
+                additionErrors.push([displayBlock, `${count} words added extra`]);
+            } else {
+                additionErrors.push([block, count === 1 ? "1 word added extra" : `${count} words added extra`]);
+            }
+        }
+    }
+    // Any remaining typed words at the end are extra.
+    if (j < typedWords.length) {
+        let count = typedWords.length - j;
+        let block = typedWords.slice(j).join(" ");
+        if (count > 2) {
+            let displayBlock = `${typedWords[j]} … ${typedWords[typedWords.length - 1]}`;
+            additionErrors.push([displayBlock, `${count} words added extra`]);
+        } else {
+            additionErrors.push([block, count === 1 ? "1 word added extra" : `${count} words added extra`]);
+        }
+    }
+    
+    return additionErrors;
+}
+
 function findMistakes(originalText, typedText) {
     // console.log("originalText:", originalText.length);
     // console.log("typedText:", typedText.length);
@@ -1325,6 +1367,11 @@ function findMistakes(originalText, typedText) {
     const substitutionErrorsList = substitutionErrors
         .map(error => `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`)
         .join('');
+    
+    const additionErrors = findAdditionMistakes(originalText, typedText);
+    const additionErrorsList = additionErrors
+        .map(error => `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`)
+        .join('');
 
     const mistakesHTML = `
         <h2 style="text-align:center;">Full Mistakes</h2>
@@ -1343,7 +1390,7 @@ function findMistakes(originalText, typedText) {
                 </tr>
                 <tr>
                     <td><h4>Addition Errors</h4></td>
-                    <td><ul style="list-style-type: none;"></ul></td>
+                    <td><ul style="list-style-type: none;">${additionErrorsList}</ul></td>
                 </tr>
                 <tr>
                     <td><h4>Spelling Errors</h4></td>
