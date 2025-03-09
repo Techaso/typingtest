@@ -1140,26 +1140,26 @@ function findSpacingMistakes(originalText, typedText) {
 
 function findOmissionMistakes(originalText, typedText) {
     const omissionErrors = [];
-    // Helper to remove punctuation from a word
     function normalize(word) {
-        // Adjust punctuation characters as needed
         return word.replace(/[.,!?;:'"()\[\]{}\\\/]/g, "");
     }
     
-    // Split texts into words (filter out any empty strings)
     const originalWords = originalText.split(/\s+/).filter(w => w.length > 0);
     const typedWords = typedText.split(/\s+/).filter(w => w.length > 0);
     
+    // If the number of words is the same, assume that any mismatch is not an omission error.
+    if (originalWords.length === typedWords.length) {
+        return omissionErrors;
+    }
+    
     let i = 0, j = 0;
     while (i < originalWords.length && j < typedWords.length) {
-        // Compare normalized forms so punctuation differences are ignored
         if (normalize(originalWords[i]) === normalize(typedWords[j])) {
             i++;
             j++;
         } else {
-            // Start a block of omissions from the original text.
+            // Record omission block
             let start = i;
-            // Advance i until we reach a word that matches typedWords[j] (using normalized forms)
             while (i < originalWords.length && (j >= typedWords.length || normalize(originalWords[i]) !== normalize(typedWords[j]))) {
                 i++;
             }
@@ -1171,11 +1171,10 @@ function findOmissionMistakes(originalText, typedText) {
             } else if (count > 2) {
                 omissionErrors.push([`${originalWords[start]} … ${originalWords[i - 1]}`, count]);
             }
-            // Do not advance j here; we try to match the next original word with the current j.
         }
     }
     
-    // Any remaining words from original text are considered omissions.
+    // If any words remain in the original, then those are omissions.
     while (i < originalWords.length) {
         let start = i;
         while (i < originalWords.length) {
@@ -1192,6 +1191,63 @@ function findOmissionMistakes(originalText, typedText) {
     }
     
     return omissionErrors;
+}
+
+function findSubstitutionMistakes(originalText, typedText) {
+    const substitutionErrors = [];
+    // Split texts into words (ignoring empty strings)
+    const origWords = originalText.split(/\s+/).filter(w => w.length > 0);
+    const typedWords = typedText.split(/\s+/).filter(w => w.length > 0);
+    const minLength = Math.min(origWords.length, typedWords.length);
+    
+    // Normalize by lowercasing. (You can extend this normalization if desired)
+    const normalize = (word) => word.toLowerCase();
+    
+    let i = 0;
+    while (i < minLength) {
+        // Skip transposition errors (already handled elsewhere)
+        if (i < minLength - 1 &&
+            normalize(origWords[i]) === normalize(typedWords[i+1]) &&
+            normalize(origWords[i+1]) === normalize(typedWords[i])) {
+            i += 2;
+            continue;
+        }
+
+        if (normalize(origWords[i]) !== normalize(typedWords[i])) {
+            // Start grouping consecutive substitution errors
+            let groupOrig = [origWords[i]];
+            let groupTyped = [typedWords[i]];
+            let j = i + 1;
+            while (j < minLength) {
+                // Do not group if a transposition is detected next
+                if (j < minLength - 1 &&
+                    normalize(origWords[j]) === normalize(typedWords[j+1]) &&
+                    normalize(origWords[j+1]) === normalize(typedWords[j])) {
+                    break;
+                }
+                if (normalize(origWords[j]) === normalize(typedWords[j])) {
+                    break;
+                }
+                groupOrig.push(origWords[j]);
+                groupTyped.push(typedWords[j]);
+                j++;
+            }
+            let originalStr, typedStr;
+            if (groupOrig.length > 2) {
+                // Use ellipsis format and append the number of words substituted
+                originalStr = `${groupOrig[0]} … ${groupOrig[groupOrig.length - 1]} (${groupOrig.length} words substituted)`;
+                typedStr = `${groupTyped[0]} … ${groupTyped[groupTyped.length - 1]} (${groupTyped.length} words substituted)`;
+            } else {
+                originalStr = groupOrig.join(" ");
+                typedStr = groupTyped.join(" ");
+            }
+            substitutionErrors.push([originalStr, typedStr]);
+            i = j;
+        } else {
+            i++;
+        }
+    }
+    return substitutionErrors;
 }
 
 function findMistakes(originalText, typedText) {
@@ -1264,6 +1320,11 @@ function findMistakes(originalText, typedText) {
         } else {
             return `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]} words missed</span></li>`
         }}).join('');
+    
+    const substitutionErrors = findSubstitutionMistakes(originalText, typedText);
+    const substitutionErrorsList = substitutionErrors
+        .map(error => `<li><span style="color:green;">${error[0]}</span> => <span style="color:red;">${error[1]}</span></li>`)
+        .join('');
 
     const mistakesHTML = `
         <h2 style="text-align:center;">Full Mistakes</h2>
@@ -1278,7 +1339,7 @@ function findMistakes(originalText, typedText) {
                 </tr>
                 <tr>
                     <td><h4>Substitution Errors</h4></td>
-                    <td><ul style="list-style-type: none;"></ul></td>
+                    <td><ul style="list-style-type: none;">${substitutionErrorsList}</ul></td>
                 </tr>
                 <tr>
                     <td><h4>Addition Errors</h4></td>
