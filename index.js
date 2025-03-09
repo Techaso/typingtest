@@ -26,6 +26,7 @@ const websiteHeading = document.getElementById('website-heading');
 const reloadButton = document.getElementById('reload-button');
 const generateTextButton = document.getElementById('generate-btn');
 const aiContainer = document.getElementById('ai-container');
+const noLimitOption = document.getElementById('no-limit-option');
 
 // Add these global variables
 let interval;
@@ -41,7 +42,6 @@ if (predefinedTextRadio.checked) {
     uploadContainer.style.display = 'none';
 }
 predefinedTextRadio.addEventListener('change', () => {
-    const noLimitOption = document.getElementById('no-limit-option');
     noLimitOption.style.display = 'none';
     wordLimitSelect.value = "100";
     wordLimitGroup.style.display = 'flex';  // Changed from 'block' to 'flex'
@@ -51,9 +51,9 @@ predefinedTextRadio.addEventListener('change', () => {
 });
 
 customTextRadio.addEventListener('change', () => {
-    const noLimitOption = document.getElementById('no-limit-option');
-    wordLimitSelect.value = noLimitOption.value;
-    noLimitOption.style.display = '';
+    // wordLimitSelect.value = noLimitOption.value;
+    // noLimitOption.style.display = '';
+    wordLimitSelect.value = "100";
     customWordLimitInput.value = ""; 
     customWordLimitInput.disabled = true;
     // Keep word limit group visible for custom text too
@@ -352,6 +352,7 @@ async function generateText() {
     
     try {
         const apiUrl = new URL('https://goldfish-app-yq66j.ondigitalocean.app/api/generate-text');
+        // const apiUrl = new URL('http://localhost:3000/api/generate-text');
         apiUrl.searchParams.append('wordLimit', wordLimit);
         apiUrl.searchParams.append('type', generationType);
         
@@ -541,6 +542,7 @@ function resolveSelectedTime() {
 }
 
 function startTypingTest(text, time) {
+    document.querySelector('.container').style.width = '60%';
     window.typedText = '';
     
     // Reset UI from any previous test
@@ -917,60 +919,58 @@ function updateTimerDisplay(time) {
 }
 
 function findPunctuationMistakes(originalText, typedText) {
-    // Define punctuation characters. 
-    // Move the hyphen at the end (or escape it) to avoid its interpretation as a range.
+    // Define punctuation characters. Note that hyphen is moved to the end.
     const punctuationChars = ',.!?;:\'"_()\\[\\]{}\\/\\\\&@#$%^*+=<>~`|-';
     const punctuationErrors = [];
-    
+
     // Split both texts into words and filter out empty strings
     const originalWords = originalText.split(/\s+/).filter(word => word.length > 0);
     const typedWords = typedText.split(/\s+/).filter(word => word.length > 0);
-    
+
     // Compare words up to the shorter array's length
     const minLength = Math.min(originalWords.length, typedWords.length);
-    
+
+    // Helper function: remove punctuation
+    const stripPunctuation = word => word.replace(new RegExp(`[${punctuationChars}]`, 'g'), '');
+
     for (let i = 0; i < minLength; i++) {
         const originalWord = originalWords[i];
         const typedWord = typedWords[i];
-        
+
         // Skip if words are identical
         if (originalWord === typedWord) continue;
-        
-        // Check if words differ only in punctuation
-        const stripPunctuation = (word) => word.replace(new RegExp(`[${punctuationChars}]`, 'g'), '');
+
         const originalWordStripped = stripPunctuation(originalWord);
         const typedWordStripped = stripPunctuation(typedWord);
-        
-        // If the words are the same after removing punctuation (and non-empty), it's a punctuation error
+
+        // If words are the same after removing punctuation and are non-empty, a punctuation error occurred.
         if (originalWordStripped === typedWordStripped && originalWordStripped.length > 0) {
-            // Check if there's actually punctuation in either word
+            // Only flag if at least one word contains punctuation
             const originalPunctuation = originalWord.match(new RegExp(`[${punctuationChars}]`, 'g'));
             const typedPunctuation = typedWord.match(new RegExp(`[${punctuationChars}]`, 'g'));
-            
             if (originalPunctuation || typedPunctuation) {
+                // Push error as [typedWord, originalWord] so mapping displays: original => typed
                 punctuationErrors.push([typedWord, originalWord]);
             }
         }
     }
-    
-    // Check for missing words (present in original but not in typed) that might contain punctuation
+
+    // For missing words (present in original but not in typed)
     for (let i = minLength; i < originalWords.length; i++) {
         const word = originalWords[i];
         if (new RegExp(`[${punctuationChars}]`, 'g').test(word)) {
-            punctuationErrors.push(`[missing] {${word}}`);
+            punctuationErrors.push(["[missing]", word]);
         }
     }
-    
-    // Check for extra words (present in typed text but not in original) that might contain punctuation
+
+    // For extra words (present in typed but not in original)
     for (let i = minLength; i < typedWords.length; i++) {
         const word = typedWords[i];
         if (new RegExp(`[${punctuationChars}]`, 'g').test(word)) {
-            punctuationErrors.push(`${word} {[none]}`);
+            punctuationErrors.push([word, "[extra]"]);
         }
     }
-    
-    // Return the collected punctuation errors (instead of only logging)
-    // console.log("punctuationErrors:", punctuationErrors);
+
     return punctuationErrors;
 }
 
@@ -1790,6 +1790,18 @@ function navigateHome() {
 // Add word limit change listener
 wordLimitSelect.addEventListener('change', updateWordCount);
 customWordLimitInput.addEventListener('input', updateWordCount);
+customWordLimitInput.setAttribute('min', '1');
+customWordLimitInput.addEventListener('input', function() {
+    if (parseInt(this.value) < 1 || isNaN(parseInt(this.value))) {
+        this.value = '';
+    }
+});
+customTimerInput.setAttribute('min', '1');
+customTimerInput.addEventListener('input', function() {
+    if (parseInt(this.value) < 1 || isNaN(parseInt(this.value))) {
+        this.value = '';
+    }
+});
 customText.addEventListener('input', updateWordCount);
 
 // Add event listener for generate button

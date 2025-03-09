@@ -17,7 +17,7 @@ body {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    width: 60%;
+    width: 40%;
     max-width: 800px;
     display: flex;
     flex-direction: column;
@@ -206,7 +206,8 @@ form {
     width: 50%;
 }
 #ai-container {
-    margin-top: 15px;
+    margin-top: 20px;
+    margin-bottom: 10px;
 }
 
 
