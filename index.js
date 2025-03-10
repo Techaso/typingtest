@@ -1910,3 +1910,72 @@ function insertTabAtCursor(el) {
 		el.innerText += '\t';
 	}
 }
+
+// Add a new button for saving typing-text-live text on the result page
+document.addEventListener('DOMContentLoaded', function() {
+    // Create Save Result Text button
+    const saveResultTextBtn = document.createElement('button');
+    saveResultTextBtn.id = 'save-result-text-btn';
+    saveResultTextBtn.textContent = 'Save Result Text';
+    saveResultTextBtn.className = 'reload-button'; // Use the same class as the restart test button
+    saveResultTextBtn.style.display = 'none'; // Initially hidden
+    saveResultTextBtn.style.marginRight = '10px'; // Add margin to separate buttons
+    
+    // Create View Saved Texts button
+    const viewSavedTextsBtn = document.createElement('button');
+    viewSavedTextsBtn.id = 'view-result-saved-texts-btn';
+    viewSavedTextsBtn.textContent = 'View Saved Texts';
+    viewSavedTextsBtn.className = 'reload-button';
+    viewSavedTextsBtn.style.display = 'none'; // Initially hidden
+    
+    // Create a container for both buttons to place them side by side
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.justifyContent = 'center';
+    buttonContainer.style.gap = '10px';
+    buttonContainer.appendChild(saveResultTextBtn);
+    buttonContainer.appendChild(viewSavedTextsBtn);
+    
+    const typingTextLiveContainer = document.getElementById('typing-text-live');
+    document.getElementById('test-results').parentNode.insertBefore(buttonContainer, document.getElementById('test-analysis'));
+
+    // Add event listener to the save button
+    saveResultTextBtn.addEventListener('click', function() {
+        const textValue = typingTextLiveContainer.innerText.replace(/\u00A0/g, ' ');
+        if (!textValue.trim()) return; // Check if it's empty after trimming
+
+        openSaveTextModal(function(heading) {
+            if (!heading) return;
+            let saved = JSON.parse(localStorage.getItem('savedTexts') || '[]');
+            saved.push({ heading, text: textValue });
+            localStorage.setItem('savedTexts', JSON.stringify(saved));
+            // Show the view button after saving
+            viewSavedTextsBtn.style.display = 'inline-block';
+        });
+    });
+    
+    // Add event listener to the view button
+    viewSavedTextsBtn.addEventListener('click', function() {
+        window.location.href = 'saved-texts.html';
+    });
+
+    // Show both buttons when the test results are displayed
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                if (testResults.style.display === 'block') {
+                    saveResultTextBtn.style.display = 'inline-block';
+                    // Only show view button if there are saved texts
+                    const savedTexts = JSON.parse(localStorage.getItem('savedTexts') || '[]');
+                    if (savedTexts.length > 0) {
+                        viewSavedTextsBtn.style.display = 'inline-block';
+                    }
+                } else {
+                    saveResultTextBtn.style.display = 'none';
+                    viewSavedTextsBtn.style.display = 'none';
+                }
+            }
+        });
+    });
+    observer.observe(testResults, { attributes: true });
+});

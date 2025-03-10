@@ -16,6 +16,7 @@ function loadSavedTexts() {
     const recentHeading = document.createElement('h3');
     recentHeading.textContent = "Most Recently Saved Text";
     recentHeading.style.textAlign = "center";
+    recentHeading.style.marginTop = "40px";
     container.appendChild(recentHeading);
 
     // Add the most recent item (first in the reversed array)
@@ -610,6 +611,102 @@ function restrictToEnglishOnly(element) {
                 selection.addRange(range);
             }, 0);
         }
+    });
+}
+
+// Add a new button for saving new text on the saved texts page
+document.addEventListener('DOMContentLoaded', function() {
+    const saveNewTextBtn = document.createElement('button');
+    saveNewTextBtn.id = 'save-new-text-btn';
+    saveNewTextBtn.textContent = 'Save New Text';
+    saveNewTextBtn.className = 'reload-button'; // Use the same class as the restart test button
+    saveNewTextBtn.style.position = 'absolute';
+    saveNewTextBtn.style.top = '10px';
+    saveNewTextBtn.style.right = '15px';
+    const container = document.querySelector('.container');
+    container.style.position = 'relative'; // Ensure the container is positioned relative
+    container.appendChild(saveNewTextBtn);
+
+    // Add event listener to the new button
+    saveNewTextBtn.addEventListener('click', function() {
+        openSaveTextModal(function(heading, textValue) {
+            if (!heading || !textValue.trim()) return;
+            let saved = JSON.parse(localStorage.getItem('savedTexts') || '[]');
+            saved.push({ heading, text: textValue });
+            localStorage.setItem('savedTexts', JSON.stringify(saved));
+            loadSavedTexts(); // Refresh the saved texts list
+        });
+    });
+});
+
+// Define the openSaveTextModal function
+function openSaveTextModal(callback) {
+    const modalOverlay = document.createElement('div');
+    modalOverlay.style.position = 'fixed';
+    modalOverlay.style.top = '0';
+    modalOverlay.style.left = '0';
+    modalOverlay.style.width = '100%';
+    modalOverlay.style.height = '100%';
+    modalOverlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modalOverlay.style.display = 'flex';
+    modalOverlay.style.justifyContent = 'center';
+    modalOverlay.style.alignItems = 'center';
+    modalOverlay.style.zIndex = '1000';
+
+    const modalContent = document.createElement('div');
+    modalContent.style.backgroundColor = '#fff';
+    modalContent.style.padding = '20px';
+    modalContent.style.borderRadius = '8px';
+    modalContent.style.width = '80%';
+    modalContent.style.maxWidth = '600px';
+    modalContent.innerHTML = `
+        <h2>Save Your Text</h2>
+        <label>Heading: <span style="color: red;">*</span></label><br>
+        <input type="text" id="save-heading" style="width: 100%;" required><br><br>
+        <label>Text: <span style="color: red;">*</span></label><br>
+        <textarea id="save-text" style="width: 100%; height: 200px;" required></textarea><br><br>
+        <p id="heading-error" style="color: red; display: none;">Heading is required</p>
+        <p id="text-error" style="color: red; display: none;">Text is required</p><br>
+        <button id="save-text-submit">Save</button>
+        <button id="save-text-cancel">Cancel</button>
+    `;
+    modalOverlay.appendChild(modalContent);
+    document.body.appendChild(modalOverlay);
+
+    document.getElementById('save-text-submit').addEventListener('click', () => {
+        const heading = document.getElementById('save-heading').value;
+        const textValue = document.getElementById('save-text').value;
+        const headingErrorElement = document.getElementById('heading-error');
+        const textErrorElement = document.getElementById('text-error');
+
+        // Validate the heading and text fields
+        let isValid = true;
+        if (!heading) {
+            headingErrorElement.style.display = 'block';
+            isValid = false;
+        } else {
+            headingErrorElement.style.display = 'none';
+        }
+        if (!textValue.trim()) {
+            textErrorElement.style.display = 'block';
+            isValid = false;
+        } else {
+            textErrorElement.style.display = 'none';
+        }
+        if (!isValid) return;
+
+        // If heading and text are valid, continue with saving
+        modalContent.innerHTML = `<h2>Text saved successfully</h2>`;
+        setTimeout(() => {
+            if(document.body.contains(modalOverlay)) {
+                document.body.removeChild(modalOverlay);
+            }
+            callback(heading, textValue);
+        }, 1000); // wait 1 second before closing
+    });
+    
+    document.getElementById('save-text-cancel').addEventListener('click', () => {
+        document.body.removeChild(modalOverlay);
     });
 }
 
