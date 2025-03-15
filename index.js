@@ -27,14 +27,14 @@ const reloadButton = document.getElementById('reload-button');
 const generateTextButton = document.getElementById('generate-btn');
 const aiContainer = document.getElementById('ai-container');
 const noLimitOption = document.getElementById('no-limit-option');
-
+const typingMode = document.getElementById('mode-select').value;
 // Add these global variables
 let interval;
 let startTime;
 let elapsedTime;
 let remainingTime;
 let timerStarted = false;
-let excessCharacters = '';
+// let excessCharacters = '';
 
 // Show/hide sections based on initial selection
 if (predefinedTextRadio.checked) {
@@ -567,7 +567,7 @@ function startTypingTest(text, time) {
     
     // Reset timerStarted flag and clear any existing timer data
     timerStarted = false;
-    excessCharacters = '';
+    // excessCharacters = '';
     
     // Sanitize original text but preserve whitespace
     text = sanitizeQuotesAndDashes(text);
@@ -606,7 +606,7 @@ function startTypingTest(text, time) {
             // Update the global reference to typingInput
             typingInput = newTypingInput;
 
-            excessCharacters = '';
+            // excessCharacters = '';
             startTime = Date.now();
             startTypingTest(text, time);
         }
@@ -764,6 +764,7 @@ function startTypingTest(text, time) {
         }
         
         const charSpans = typingTextLive.querySelectorAll('span');
+
         
         // Reset all spans for re-evaluation
         for (let i = 0; i < charSpans.length; i++) {
@@ -771,7 +772,7 @@ function startTypingTest(text, time) {
             charSpans[i].style.color = '';
         }
         
-        excessCharacters = '';
+        // excessCharacters = '';
         for (let i = 0; i < typedText.length; i++) {
             if (i < text.length) {
                 const isCorrect = typedText[i] === text[i];
@@ -786,22 +787,23 @@ function startTypingTest(text, time) {
                     // Regular styling for non-whitespace characters
                     charSpans[i].style.color = isCorrect ? 'green' : 'red';
                 }
-            } else {
-                // Handle excess characters
-                if (typedText[i] === ' ') {
-                    // Space with red background
-                    excessCharacters += '<span style="background-color: red;">&nbsp;</span>';
-                } else if (typedText[i] === '\n') {
-                    // Newline with red background
-                    excessCharacters += '<span style="background-color: red;"><br></span>';
-                } else if (typedText[i] === '\t') {
-                    // Tab with red background
-                    excessCharacters += '<span style="background-color: red;">&nbsp;&nbsp;&nbsp;&nbsp;</span>';
-                } else {
-                    // Regular character with red text
-                    excessCharacters += '<span style="color: red;">' + typedText[i] + '</span>';
-                }
             }
+            // else {
+            //     // Handle excess characters
+            //     if (typedText[i] === ' ') {
+            //         // Space with red background
+            //         excessCharacters += '<span style="background-color: red;">&nbsp;</span>';
+            //     } else if (typedText[i] === '\n') {
+            //         // Newline with red background
+            //         excessCharacters += '<span style="background-color: red;"><br></span>';
+            //     } else if (typedText[i] === '\t') {
+            //         // Tab with red background
+            //         excessCharacters += '<span style="background-color: red;">&nbsp;&nbsp;&nbsp;&nbsp;</span>';
+            //     } else {
+            //         // Regular character with red text
+            //         excessCharacters += '<span style="color: red;">' + typedText[i] + '</span>';
+            //     }
+            // }
         }
         
         // Highlight current position if within text bounds
@@ -1273,7 +1275,7 @@ function findAdditionMistakes(originalText, typedText) {
                 let displayBlock = `${typedWords[start]} … ${typedWords[j - 1]}`;
                 additionErrors.push([displayBlock, `${count} words added extra`]);
             } else {
-                additionErrors.push([block, count === 1 ? "1 word added extra" : `${count} words added extra`]);
+                additionErrors.push([block, count === 1 ? "1 extra word typed" : `${count} words added extra`]);
             }
         }
     }
@@ -1574,12 +1576,12 @@ function calculateSpeed(charsTyped, elapsedTime) {
     window.hasTestEnded = true;
     reloadButton.innerHTML = '<i class="fas fa-redo-alt"></i> Retake Test';  
 
-    if (excessCharacters) {
-        const excessDiv = document.createElement('div');
-        excessDiv.innerHTML = excessCharacters;
-        excessDiv.style.display = 'inline-block';
-        typingTextLive.appendChild(excessDiv);
-    }
+    // if (excessCharacters) {
+    //     const excessDiv = document.createElement('div');
+    //     excessDiv.innerHTML = excessCharacters;
+    //     excessDiv.style.display = 'inline-block';
+    //     typingTextLive.appendChild(excessDiv);
+    // }
 
     // Get the typed text (with non-breaking spaces converted to regular spaces)
     const typedText = typingInput.innerText.replace(/\u00A0/g, ' ');
@@ -1875,7 +1877,8 @@ generateTextButton.addEventListener('click', async function() {
         
         // Put the generated text into the custom-text element, preserving whitespace
         customText.innerHTML = '';
-        customText.appendChild(preservedText(generatedText));
+        // customText.appendChild(preservedText(generatedText));
+        cleanAndPasteText(generatedText, customText);
         
         // Update the word count display and ensure visibility
         updateWordCount();
