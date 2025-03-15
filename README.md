@@ -1,4 +1,4 @@
-# Productively Learn Typing with AI JavaScript, Node.js Website
+# Productively Learn Typing with AI
 
 A modern typing practice application that helps you improve your typing speed and accuracy while learning about topics that interest you through AI-generated content.
 
